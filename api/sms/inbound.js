@@ -5,10 +5,50 @@
 // =====================================================================
 import { DS, queryAll, txt, relId, pageId, phoneKey, perthToday, setEscalaStatus, appendObservacao } from "./_lib.js";
 
+// Interpreta a resposta da pessoa de forma tolerante.
+// Aceita varias formas de escrever; na duvida devolve "?" (vira observacao
+// no Notion para um humano decidir, sem chutar errado).
 function interpreta(msg) {
-  const t = (msg || "").trim().toLowerCase();
-  if (/^(sim|s|yes|y|ok|confirmo|confirmado|👍�✅)/.test(t)) return "sim";
-  if (/^(nao|não|n|no|negativo|❌)/.test(t)) return "nao";
+  const raw = (msg || "").trim();
+
+  // 1) Emojis comuns
+  if (/[\u{1F44D}✅\u{1F646}\u{1F197}\u{1F44C}]/u.test(raw)) return "sim"; // 👍 ✅ 🙆 🆗 👌
+  if (/[❌\u{1F6AB}\u{1F44E}]/u.test(raw)) return "nao";                   // ❌ 🚫 👎
+
+  // 2) Normaliza: minusculas, troca acentos, so letras e espacos
+  const t = raw
+    .toLowerCase()
+    .replace(/[áàâãä]/g, "a")
+    .replace(/[éèêë]/g, "e")
+    .replace(/[íìî]/g, "i")
+    .replace(/[óòôõö]/g, "o")
+    .replace(/[úùûü]/g, "u")
+    .replace(/ç/g, "c")
+    .replace(/[^a-z\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!t) return "?";
+
+  const palavras = t.split(" ");
+  const tem = (...lista) => lista.some((w) => palavras.includes(w));
+  const contem = (...lista) => lista.some((f) => t.includes(f));
+
+  // 3) Negacao tem prioridade (resposta a "pode confirmar presenca?")
+  if (
+    tem("nao", "n", "nops", "nunca", "negativo", "impossivel", "fora") ||
+    contem("nao posso", "nao vou", "nao consigo", "nao da", "nao poderei", "nao to", "nao estarei", "nao tenho")
+  ) return "nao";
+
+  // 4) Confirmacao
+  if (
+    tem("sim", "s", "yes", "y", "ok", "okay", "claro", "confirmo", "confirmado",
+        "confirmar", "confirma", "posso", "vou", "irei", "bora", "beleza", "blz",
+        "certo", "certeza", "positivo", "combinado", "dentro", "estarei",
+        "comparecerei", "pode", "show", "tranquilo") ||
+    contem("pode contar", "com certeza", "to dentro", "estou dentro", "vou sim",
+           "posso sim", "ta certo", "ta bom", "tudo certo", "sem problema")
+  ) return "sim";
+
   return "?";
 }
 
@@ -62,7 +102,7 @@ export default async function handler(req, res) {
       await setEscalaStatus(alvo.id, "Pendente");
       await appendObservacao(alvo.id, `RECUSOU via SMS em ${carimbo}: "${message.trim()}".`);
     } else {
-      await appendObservacao(alvo.id, `Resposta SMS em ${carimbo}: "${message.trim()}".`);
+      await appendObservacao(alvo.id, `Resposta SMS em ${carimbo} (nao entendida, conferir): "${message.trim()}".`);
     }
 
     res.status(200).json({ ok: true, staff: staffNome, resposta });
