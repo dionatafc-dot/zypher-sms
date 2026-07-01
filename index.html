@@ -1,13 +1,14 @@
 <!doctype html>
-<html lang="pt-BR">
+<html lang="en">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, viewport-fit=cover" />
 <meta name="theme-color" content="#121212" />
-<title>SMS · Equipe</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2032%2032%22%3E%3Crect%20width%3D%2232%22%20height%3D%2232%22%20rx%3D%227%22%20fill%3D%22%233b82f6%22/%3E%3Cpath%20d%3D%22M8%209h16l-8%209v4h4v2H12v-2h4v-4z%22%20fill%3D%22%23ffffff%22/%3E%3C/svg%3E" />
+<title>SMS · Team</title>
 <link rel="stylesheet" href="/styles.css" />
 <style>
-/* Acréscimos só do painel SMS (o resto vem do /styles.css do site) */
+/* Panel-only additions (the rest comes from the site's /styles.css) */
 .choice .c-main{min-width:0}
 .choice .c-sub{display:block;color:var(--muted);font-size:14px;font-weight:400;margin-top:3px}
 .row.disabled{opacity:.55}
@@ -33,51 +34,51 @@
   <section id="screen-events">
     <div class="top">
       <div>
-        <h1>Avisar a equipe</h1>
+        <h1>Notify the team</h1>
         <div class="sub">Zypher Lounge · SMS</div>
       </div>
     </div>
-    <div id="events-body"><div class="loading">Carregando…</div></div>
-    <div class="eyebrow" style="margin-top:22px">Configuração</div>
+    <div id="events-body"><div class="loading">Loading…</div></div>
+    <div class="eyebrow" style="margin-top:22px">Settings</div>
     <div class="choices">
-      <button class="choice" id="btn-webhook"><span class="c-main">🔔 Ativar confirmação automática<span class="c-sub">As respostas SIM/NÃO da equipe passam a atualizar o Notion sozinhas. Use só uma vez.</span></span><span class="arrow">›</span></button>
+      <button class="choice" id="btn-webhook"><span class="c-main">🔔 Enable automatic confirmation<span class="c-sub">The team's YES/NO replies will update Notion automatically. Use once.</span></span><span class="arrow">›</span></button>
     </div>
   </section>
 
   <section id="screen-compose" class="hidden">
     <div class="top">
-      <button class="back" id="btn-back" aria-label="Voltar">‹</button>
+      <button class="back" id="btn-back" aria-label="Back">‹</button>
       <div>
-        <h1 id="compose-title">Evento</h1>
+        <h1 id="compose-title">Event</h1>
         <div class="sub" id="compose-sub"></div>
       </div>
     </div>
-    <div class="label">Mensagem</div>
+    <div class="label">Message</div>
     <textarea id="message" class="msgbox"></textarea>
-    <div class="hint">Use <b>{primeiro_nome}</b> para chamar cada pessoa pelo nome. Para confirmação, peça "responde SIM ou NÃO".</div>
+    <div class="hint">Use <b>{first_name}</b> to address each person by name. For confirmation, ask them to "reply YES or NO".</div>
     <div class="toolbar">
-      <div class="eyebrow" style="margin:0">Quem recebe</div>
+      <div class="eyebrow" style="margin:0">Recipients</div>
       <label class="switch">
         <input type="checkbox" id="show-all" />
         <span class="track"></span>
-        <span>toda a equipe</span>
+        <span>everyone</span>
       </label>
     </div>
     <div class="searchbar">
-      <input id="search" type="text" placeholder="Buscar pessoa…" autocomplete="off" />
-      <button class="search-clear hidden" id="search-clear" aria-label="Limpar">×</button>
+      <input id="search" type="text" placeholder="Search person…" autocomplete="off" />
+      <button class="search-clear hidden" id="search-clear" aria-label="Clear">×</button>
     </div>
     <div class="toolbar" style="margin-top:0">
-      <button class="btn ghost" id="sel-all" style="height:40px;font-size:14px">Marcar todos</button>
-      <button class="btn ghost" id="sel-none" style="height:40px;font-size:14px">Desmarcar</button>
+      <button class="btn ghost" id="sel-all" style="height:40px;font-size:14px">Select all</button>
+      <button class="btn ghost" id="sel-none" style="height:40px;font-size:14px">Clear</button>
     </div>
     <div class="list" id="roster"></div>
   </section>
 
   <section id="screen-result" class="hidden">
-    <div class="top"><div><h1>Envio</h1><div class="sub" id="result-sub"></div></div></div>
+    <div class="top"><div><h1>Sent</h1><div class="sub" id="result-sub"></div></div></div>
     <div id="result-body"></div>
-    <button class="btn primary block" id="btn-done" style="margin-top:20px">Voltar aos eventos</button>
+    <button class="btn primary block" id="btn-done" style="margin-top:20px">Back to events</button>
   </section>
 
 </div>
@@ -85,17 +86,17 @@
 <div class="sendbar hidden" id="sendbar">
   <div class="inner">
     <div class="sel-count" id="sel-count"></div>
-    <button class="btn primary block" id="btn-send">Enviar SMS</button>
+    <button class="btn primary block" id="btn-send">Send SMS</button>
   </div>
 </div>
 
 <div class="overlay hidden" id="pin-overlay" style="display:none">
   <div class="modal">
-    <h3>Acesso ao painel</h3>
-    <p>Digite o PIN para continuar.</p>
+    <h3>Panel access</h3>
+    <p>Enter the PIN to continue.</p>
     <input id="pin-input" type="password" inputmode="numeric" placeholder="PIN" style="width:100%;height:50px;border:1px solid var(--line-soft);border-radius:12px;background:var(--bg);padding:0 16px;font-size:18px;color:var(--ink);font-family:inherit;margin-bottom:14px;text-align:center;letter-spacing:.2em" />
-    <div id="pin-err" class="errbar hidden">PIN incorreto.</div>
-    <button class="btn primary block" id="pin-ok">Entrar</button>
+    <div id="pin-err" class="errbar hidden">Wrong PIN.</div>
+    <button class="btn primary block" id="pin-ok">Enter</button>
   </div>
 </div>
 
@@ -110,31 +111,31 @@ $("#pin-ok").onclick = () => { const v=$("#pin-input").value.trim(); if(!v)retur
 $("#pin-input").addEventListener("keydown",(e)=>{ if(e.key==="Enter")$("#pin-ok").click(); });
 
 async function loadEvents(){
-  $("#events-body").innerHTML='<div class="loading">Carregando…</div>';
+  $("#events-body").innerHTML='<div class="loading">Loading…</div>';
   try{
     const r=await fetch("/api/sms/events",{headers:headers()});
     if(r.status===401){ sessionStorage.removeItem("sms_pin"); state.pin=""; askPin(); return; }
     if(!r.ok) throw new Error((await r.json()).error||r.status);
     state.data=await r.json(); renderEvents();
-  }catch(e){ $("#events-body").innerHTML='<div class="errbar">Erro ao carregar: '+e.message+'</div>'; }
+  }catch(e){ $("#events-body").innerHTML='<div class="errbar">Error loading: '+e.message+'</div>'; }
 }
-function fmtDate(iso){ if(!iso)return""; const[y,m,d]=iso.split("-"); const meses=["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"]; return d+" "+(meses[(+m)-1]||""); }
+function fmtDate(iso){ if(!iso)return""; const[y,m,d]=iso.split("-"); const meses=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]; return (meses[(+m)-1]||"")+" "+d; }
 function renderEvents(){
   const evs=state.data.events||[];
-  let html='<div class="eyebrow">Próximos eventos</div><div class="choices">';
-  if(!evs.length){ html+='<div class="empty"><div class="big">Nenhum evento futuro</div>Cadastre um evento no Notion para ver aqui.</div>'; }
-  else{ for(const ev of evs){ const qtd=ev.roster.filter(p=>p.temPessoa).length; html+=`<button class="choice" data-ev="${ev.id}"><span class="c-main">${esc(ev.nome)}<span class="c-sub">${fmtDate(ev.data)}${ev.inicio?" · "+esc(ev.inicio):""} · ${qtd} na escala</span></span><span class="arrow">›</span></button>`; } }
-  html+='</div><div class="eyebrow">Ou</div><div class="choices"><button class="choice" data-ev="__manual__"><span class="c-main">✍️ Mensagem manual<span class="c-sub">Escolher pessoas e escrever do zero</span></span><span class="arrow">›</span></button></div>';
+  let html='<div class="eyebrow">Upcoming events</div><div class="choices">';
+  if(!evs.length){ html+='<div class="empty"><div class="big">No upcoming events</div>Create an event in Notion to see it here.</div>'; }
+  else{ for(const ev of evs){ const qtd=ev.roster.filter(p=>p.temPessoa).length; html+=`<button class="choice" data-ev="${ev.id}"><span class="c-main">${esc(ev.nome)}<span class="c-sub">${fmtDate(ev.data)}${ev.inicio?" · "+esc(ev.inicio):""} · ${qtd} scheduled</span></span><span class="arrow">›</span></button>`; } }
+  html+='</div><div class="eyebrow">Or</div><div class="choices"><button class="choice" data-ev="__manual__"><span class="c-main">✍️ Manual message<span class="c-sub">Pick people and write from scratch</span></span><span class="arrow">›</span></button></div>';
   $("#events-body").innerHTML=html;
   document.querySelectorAll("[data-ev]").forEach(b=>b.onclick=()=>openCompose(b.dataset.ev));
 }
 function openCompose(evId){
   state.selected=new Map();
-  if(evId==="__manual__"){ state.event=null; $("#compose-title").textContent="Mensagem manual"; $("#compose-sub").textContent="Escolha quem recebe"; $("#message").value="Oi {primeiro_nome}! "; $("#show-all").checked=true; state.roster=buildManualRoster(); }
-  else{ const ev=state.data.events.find(e=>e.id===evId); state.event=ev; $("#compose-title").textContent=ev.nome; $("#compose-sub").textContent=fmtDate(ev.data)+(ev.inicio?" · começa "+ev.inicio:""); $("#message").value=defaultMsg(ev); $("#show-all").checked=false; state.roster=ev.roster.filter(p=>p.temPessoa).map(p=>({...p})); for(const p of state.roster) if(p.phone) state.selected.set(p.phone,p.nome); }
+  if(evId==="__manual__"){ state.event=null; $("#compose-title").textContent="Manual message"; $("#compose-sub").textContent="Choose recipients"; $("#message").value="Hi {first_name}! "; $("#show-all").checked=true; state.roster=buildManualRoster(); }
+  else{ const ev=state.data.events.find(e=>e.id===evId); state.event=ev; $("#compose-title").textContent=ev.nome; $("#compose-sub").textContent=fmtDate(ev.data)+(ev.inicio?" · starts "+ev.inicio:""); $("#message").value=defaultMsg(ev); $("#show-all").checked=false; state.roster=ev.roster.filter(p=>p.temPessoa).map(p=>({...p})); for(const p of state.roster) if(p.phone) state.selected.set(p.phone,p.nome); }
   $("#search").value=""; $("#search-clear").classList.add("hidden"); renderRoster(); show("compose");
 }
-function defaultMsg(ev){ const hora=ev.inicio?ev.inicio:"no horário combinado"; return `Oi {primeiro_nome}! Lembrete do ${ev.nome}: você começa ${hora}. Pode confirmar presença? Responde SIM ou NÃO. Obrigado!`; }
+function defaultMsg(ev){ const hora=ev.inicio?ev.inicio:"at the scheduled time"; return `Hi {first_name}! Reminder for ${ev.nome}: you start ${hora}. Can you confirm you'll be there? Reply YES or NO. Thanks!`; }
 function buildManualRoster(){ return (state.data.staff||[]).map(s=>({nome:s.nome,phone:s.phone,funcao:"",status:"",temPessoa:true})); }
 function currentRoster(){
   if(state.event && !$("#show-all").checked) return state.roster;
@@ -142,25 +143,26 @@ function currentRoster(){
   const extra=(state.data.staff||[]).filter(s=>!seen.has(s.phone)).map(s=>({nome:s.nome,phone:s.phone,funcao:"",status:"",temPessoa:true}));
   return state.event ? state.roster.concat(extra) : buildManualRoster();
 }
+function stLabel(s){ return ({Confirmado:"Confirmed",Pendente:"Pending",Recusado:"Declined"})[s]||s; }
 function renderRoster(){
   const q=$("#search").value.trim().toLowerCase();
   let people=currentRoster();
   if(q) people=people.filter(p=>(p.nome||"").toLowerCase().includes(q)||(p.funcao||"").toLowerCase().includes(q));
-  if(!people.length){ $("#roster").innerHTML='<div class="empty">Ninguém encontrado.</div>'; updateBar(); return; }
+  if(!people.length){ $("#roster").innerHTML='<div class="empty">No one found.</div>'; updateBar(); return; }
   let html="";
   for(const p of people){
     const on=p.phone && state.selected.has(p.phone);
     const semTel=!p.phone;
-    const stChip=p.status?`<span class="chip ${p.status==="Confirmado"?"ok":p.status==="Pendente"?"pend":""}">${esc(p.status)}</span>`:"";
+    const stChip=p.status?`<span class="chip ${p.status==="Confirmado"?"ok":p.status==="Pendente"?"pend":""}">${esc(stLabel(p.status))}</span>`:"";
     const fnChip=p.funcao?`<span class="chip">${esc(p.funcao)}</span>`:"";
-    html+=`<div class="row ${on?"on":""} ${semTel?"disabled":""}" data-ph="${esc(p.phone)}" data-nm="${esc(p.nome)}"><div class="row-main"><div class="row-text"><div class="row-name">${esc(p.nome)||"(sem nome)"}</div><div class="row-meta">${fnChip}${stChip}${semTel?'<span class="chip no">sem telefone</span>':""}</div></div>${semTel?"":`<button class="yes ${on?"active":""}">${on?"✓":"+"}</button>`}</div></div>`;
+    html+=`<div class="row ${on?"on":""} ${semTel?"disabled":""}" data-ph="${esc(p.phone)}" data-nm="${esc(p.nome)}"><div class="row-main"><div class="row-text"><div class="row-name">${esc(p.nome)||"(no name)"}</div><div class="row-meta">${fnChip}${stChip}${semTel?'<span class="chip no">no phone</span>':""}</div></div>${semTel?"":`<button class="yes ${on?"active":""}">${on?"✓":"+"}</button>`}</div></div>`;
   }
   $("#roster").innerHTML=html;
   document.querySelectorAll("#roster .row").forEach(row=>{ const ph=row.dataset.ph,nm=row.dataset.nm; if(!ph)return; row.querySelector(".yes").onclick=()=>{ toggle(ph,nm); renderRoster(); }; });
   updateBar();
 }
 function toggle(ph,nm){ if(state.selected.has(ph)) state.selected.delete(ph); else state.selected.set(ph,nm); }
-function updateBar(){ const n=state.selected.size; $("#sel-count").textContent=n+(n===1?" pessoa selecionada":" pessoas selecionadas"); $("#btn-send").textContent=n?"Enviar SMS ("+n+")":"Selecione quem recebe"; $("#btn-send").disabled=n===0; $("#btn-send").style.opacity=n===0?".5":"1"; }
+function updateBar(){ const n=state.selected.size; $("#sel-count").textContent=n+(n===1?" person selected":" people selected"); $("#btn-send").textContent=n?"Send SMS ("+n+")":"Select recipients"; $("#btn-send").disabled=n===0; $("#btn-send").style.opacity=n===0?".5":"1"; }
 $("#show-all").onchange=renderRoster;
 $("#search").oninput=()=>{ $("#search-clear").classList.toggle("hidden",!$("#search").value); renderRoster(); };
 $("#search-clear").onclick=()=>{ $("#search").value=""; $("#search-clear").classList.add("hidden"); renderRoster(); };
@@ -169,36 +171,36 @@ $("#sel-none").onclick=()=>{ state.selected.clear(); renderRoster(); };
 $("#btn-back").onclick=()=>show("events");
 $("#btn-done").onclick=()=>{ loadEvents(); show("events"); };
 $("#btn-send").onclick=async()=>{
-  const msg=$("#message").value.trim(); if(!msg){ alert("Escreva a mensagem."); return; }
+  const msg=$("#message").value.trim(); if(!msg){ alert("Write the message."); return; }
   const recipients=[...state.selected.entries()].map(([phone,nome])=>({phone,nome}));
   if(!recipients.length) return;
-  if(!confirm("Enviar para "+recipients.length+" pessoa(s)?")) return;
-  $("#btn-send").textContent="Enviando…"; $("#btn-send").disabled=true;
+  if(!confirm("Send to "+recipients.length+" people?")) return;
+  $("#btn-send").textContent="Sending…"; $("#btn-send").disabled=true;
   try{
     const r=await fetch("/api/sms/send",{method:"POST",headers:headers(),body:JSON.stringify({message:msg,recipients})});
     if(r.status===401){ askPin(); return; }
     const res=await r.json(); if(!r.ok) throw new Error(res.error||r.status);
     showResult(res);
-  }catch(e){ alert("Erro ao enviar: "+e.message); updateBar(); }
+  }catch(e){ alert("Send error: "+e.message); updateBar(); }
 };
 $("#btn-webhook").onclick=async()=>{
   if(!state.pin){ askPin(); return; }
-  if(!confirm("Ativar a confirmação automática de presença?\n\nAs respostas SIM/NÃO da equipe passarão a atualizar o Notion automaticamente. Você só precisa fazer isso uma vez.")) return;
+  if(!confirm("Enable automatic attendance confirmation?\n\nThe team's YES/NO replies will update Notion automatically. You only need to do this once.")) return;
   const btn=$("#btn-webhook"), sub=btn.querySelector(".c-sub"), old=sub.textContent;
-  sub.textContent="Ativando…"; btn.disabled=true; btn.style.opacity=".6";
+  sub.textContent="Enabling…"; btn.disabled=true; btn.style.opacity=".6";
   try{
     const r=await fetch("/api/sms/register-webhook?pin="+encodeURIComponent(state.pin));
-    if(r.status===401){ alert("PIN incorreto. Entre novamente."); sessionStorage.removeItem("sms_pin"); state.pin=""; sub.textContent=old; btn.disabled=false; btn.style.opacity="1"; askPin(); return; }
+    if(r.status===401){ alert("Wrong PIN. Please sign in again."); sessionStorage.removeItem("sms_pin"); state.pin=""; sub.textContent=old; btn.disabled=false; btn.style.opacity="1"; askPin(); return; }
     const res=await r.json();
-    if(r.ok && res.ok){ alert("✓ Confirmação automática ativada!\n\nQuando alguém responder SIM ou NÃO, o Notion atualiza sozinho."); sub.textContent="✓ Ativado"; }
-    else { alert("Não deu certo: "+(res.resposta_servidor||res.error||"erro desconhecido")); sub.textContent=old; btn.disabled=false; btn.style.opacity="1"; }
-  }catch(e){ alert("Erro: "+e.message); sub.textContent=old; btn.disabled=false; btn.style.opacity="1"; }
+    if(r.ok && res.ok){ alert("✓ Automatic confirmation enabled!\n\nWhen someone replies YES or NO, Notion updates on its own."); sub.textContent="✓ Enabled"; }
+    else { alert("Didn't work: "+(res.resposta_servidor||res.error||"unknown error")); sub.textContent=old; btn.disabled=false; btn.style.opacity="1"; }
+  }catch(e){ alert("Error: "+e.message); sub.textContent=old; btn.disabled=false; btn.style.opacity="1"; }
 };
 function showResult(res){
   const falhas=(res.resultados||[]).filter(x=>!x.ok);
-  let html=`<div class="okbar">✓ ${res.enviados} de ${res.total} enviados.</div>`;
-  if(falhas.length){ html+='<div class="errbar">'+falhas.length+' não saíram:</div><div class="list">'; for(const f of falhas) html+=`<div class="row"><div class="row-name">${esc(f.nome)||"(sem nome)"}</div><div class="row-meta">${esc(f.error)}</div></div>`; html+='</div>'; }
-  $("#result-sub").textContent=state.event?state.event.nome:"Mensagem manual";
+  let html=`<div class="okbar">✓ ${res.enviados} of ${res.total} sent.</div>`;
+  if(falhas.length){ html+='<div class="errbar">'+falhas.length+' didn\'t send:</div><div class="list">'; for(const f of falhas) html+=`<div class="row"><div class="row-name">${esc(f.nome)||"(no name)"}</div><div class="row-meta">${esc(f.error)}</div></div>`; html+='</div>'; }
+  $("#result-sub").textContent=state.event?state.event.nome:"Manual message";
   $("#result-body").innerHTML=html; show("result");
 }
 function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
