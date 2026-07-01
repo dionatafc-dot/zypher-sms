@@ -1,13 +1,12 @@
 // =====================================================================
 //  POST /api/sms/inbound
 //  Webhook do SMS Gateway (evento "sms:received").
-//  Quando alguem responde SIM/NAO, atualiza a escala no Notion.
+//  Quando alguem responde SIM/NAO (PT ou EN), atualiza a escala no Notion.
 // =====================================================================
 import { DS, queryAll, txt, relId, pageId, phoneKey, perthToday, setEscalaStatus, appendObservacao } from "./_lib.js";
 
-// Interpreta a resposta da pessoa de forma tolerante.
-// Aceita varias formas de escrever; na duvida devolve "?" (vira observacao
-// no Notion para um humano decidir, sem chutar errado).
+// Interpreta a resposta da pessoa de forma tolerante (portugues + ingles).
+// Na duvida devolve "?" (vira observacao no Notion para um humano decidir).
 function interpreta(msg) {
   const raw = (msg || "").trim();
 
@@ -15,7 +14,7 @@ function interpreta(msg) {
   if (/[\u{1F44D}✅\u{1F646}\u{1F197}\u{1F44C}]/u.test(raw)) return "sim"; // 👍 ✅ 🙆 🆗 👌
   if (/[❌\u{1F6AB}\u{1F44E}]/u.test(raw)) return "nao";                   // ❌ 🚫 👎
 
-  // 2) Normaliza: minusculas, troca acentos, so letras e espacos
+  // 2) Normaliza: minusculas, troca acentos, tira apostrofos, so letras e espacos
   const t = raw
     .toLowerCase()
     .replace(/[áàâãä]/g, "a")
@@ -24,6 +23,7 @@ function interpreta(msg) {
     .replace(/[óòôõö]/g, "o")
     .replace(/[úùûü]/g, "u")
     .replace(/ç/g, "c")
+    .replace(/['’]/g, "")
     .replace(/[^a-z\s]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
@@ -33,20 +33,26 @@ function interpreta(msg) {
   const tem = (...lista) => lista.some((w) => palavras.includes(w));
   const contem = (...lista) => lista.some((f) => t.includes(f));
 
-  // 3) Negacao tem prioridade (resposta a "pode confirmar presenca?")
+  // 3) Frases positivas que contem palavra negativa (tem prioridade sobre negacao)
+  if (contem("no problem", "no worries", "not a problem")) return "sim";
+
+  // 4) Negacao (PT + EN)
   if (
-    tem("nao", "n", "nops", "nunca", "negativo", "impossivel", "fora") ||
-    contem("nao posso", "nao vou", "nao consigo", "nao da", "nao poderei", "nao to", "nao estarei", "nao tenho")
+    tem("nao", "n", "nops", "nunca", "negativo", "impossivel", "fora",
+        "no", "nope", "nah", "cant", "cannot", "wont", "unable") ||
+    contem("nao posso", "nao vou", "nao consigo", "nao da", "nao poderei", "nao to", "nao estarei", "nao tenho",
+           "cant make", "can not", "will not", "wont be", "not able", "not coming", "not going", "not gonna", "cant come", "cant make it")
   ) return "nao";
 
-  // 4) Confirmacao
+  // 5) Confirmacao (PT + EN)
   if (
-    tem("sim", "s", "yes", "y", "ok", "okay", "claro", "confirmo", "confirmado",
-        "confirmar", "confirma", "posso", "vou", "irei", "bora", "beleza", "blz",
-        "certo", "certeza", "positivo", "combinado", "dentro", "estarei",
-        "comparecerei", "pode", "show", "tranquilo") ||
-    contem("pode contar", "com certeza", "to dentro", "estou dentro", "vou sim",
-           "posso sim", "ta certo", "ta bom", "tudo certo", "sem problema")
+    tem("sim", "s", "yes", "y", "yeah", "yep", "yup", "ok", "okay", "claro", "confirmo", "confirmado",
+        "confirmar", "confirma", "confirm", "confirmed", "posso", "vou", "irei", "bora", "beleza", "blz",
+        "certo", "certeza", "positivo", "combinado", "dentro", "estarei", "comparecerei", "pode",
+        "show", "tranquilo", "sure", "absolutely", "definitely", "coming") ||
+    contem("pode contar", "com certeza", "to dentro", "estou dentro", "vou sim", "posso sim",
+           "ta certo", "ta bom", "tudo certo", "sem problema",
+           "i can", "i will", "ill be there", "i am in", "im in", "count me in", "of course", "see you there", "will do", "ill come", "i can make")
   ) return "sim";
 
   return "?";
