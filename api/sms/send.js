@@ -1,7 +1,7 @@
 // =====================================================================
 //  POST /api/sms/send
 //  Corpo: { message, recipients: [{ nome, phone }] }
-//  Envia o SMS para cada pessoa, personalizando {nome} e {primeiro_nome}.
+//  Envia o SMS para cada pessoa, personalizando {nome}/{name} e {primeiro_nome}/{first_name}.
 // =====================================================================
 import { checkPin, sendSms } from "./_lib.js";
 
@@ -19,8 +19,10 @@ export default async function handler(req, res) {
     const nome = (r.nome || "").trim();
     const primeiro = nome.split(" ")[0] || nome;
     const texto = String(message)
+      .replaceAll("{primeiro_nome}", primeiro)
+      .replaceAll("{first_name}", primeiro)
       .replaceAll("{nome}", nome)
-      .replaceAll("{primeiro_nome}", primeiro);
+      .replaceAll("{name}", nome);
 
     if (!r.phone) {
       out.push({ nome, ok: false, error: "sem telefone" });
