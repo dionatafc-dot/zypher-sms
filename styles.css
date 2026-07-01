@@ -72,6 +72,8 @@ body {
 .row-text { flex: 1 1 auto; min-width: 0; }
 .row-name { font-size: 17px; font-weight: 500; color: #FFFFFF; }
 .row-meta { font-size: 14px; color: var(--muted); margin-top: 3px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.chip { font-size: 12px; font-weight: 600; color: var(--amber-deep); background: var(--amber-soft); border: 1px solid var(--amber-border); padding: 1px 8px; border-radius: 999px; }
+.row.on .chip { background: var(--card); }
 .qty-badge { font-size: 14px; font-weight: 700; color: #fff; background: var(--amber); border: 1px solid var(--amber); padding: 1px 9px; border-radius: 999px; min-width: 22px; text-align: center; line-height: 1.4; }
 .freq { font-size: 12px; color: var(--muted); }
 .row.on .qty-badge { background: var(--amber-deep); border-color: var(--amber-deep); }
