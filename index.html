@@ -13,6 +13,7 @@
 .chip.no{color:var(--danger);border-color:var(--danger-border);background:var(--danger-soft)}
 .qrow{background:var(--card);border:1px solid var(--line);border-radius:var(--radius-sm);padding:16px 18px;margin-bottom:10px}
 .qhead{display:flex;align-items:center;gap:14px;justify-content:space-between}
+.refresh{appearance:none;cursor:pointer;font-family:inherit;font-size:14px;font-weight:600;height:40px;padding:0 16px;border-radius:12px;border:1px solid var(--line-soft);background:var(--card-hi);color:var(--ink);flex:0 0 auto;margin-left:auto}
 .qmsg{margin-top:12px;font-size:15px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;white-space:pre-wrap;line-height:1.45}
 .sendbar{position:fixed;left:0;right:0;bottom:0;background:linear-gradient(to top,var(--bg) 72%,rgba(0,0,0,0));padding:16px 20px calc(18px + env(safe-area-inset-bottom));z-index:40}
 .sendbar .inner{max-width:720px;margin:0 auto}
@@ -33,6 +34,7 @@
         <h1>Send SMS</h1>
         <div class="sub">Zypher Lounge · SMS</div>
       </div>
+      <button class="refresh" id="btn-refresh">↻ Refresh</button>
     </div>
     <div id="queue-body"><div class="loading">Loading…</div></div>
     <div class="eyebrow" style="margin-top:26px">Settings</div>
@@ -77,7 +79,7 @@ $("#pin-input").addEventListener("keydown",(e)=>{ if(e.key==="Enter")$("#pin-ok"
 async function loadQueue(){
   $("#queue-body").innerHTML='<div class="loading">Loading…</div>';
   try{
-    const r=await fetch("/api/sms/queue",{headers:headers()});
+    const r=await fetch("/api/sms/queue?t="+Date.now(),{headers:headers(),cache:"no-store"});
     if(r.status===401){ sessionStorage.removeItem("sms_pin"); state.pin=""; askPin(); return; }
     if(!r.ok) throw new Error((await r.json()).error||r.status);
     const d=await r.json(); state.queue=d.queue||[]; renderQueue();
@@ -121,6 +123,7 @@ async function sendOne(id){
     else { toast("✕ "+((r0&&r0.error)||"failed")); if(btn){ btn.textContent="Send"; btn.disabled=false; } }
   }catch(e){ if(e.message!=="PIN") toast("✕ "+e.message); if(btn){ btn.textContent="Send"; btn.disabled=false; } }
 }
+$("#btn-refresh").onclick=()=>{ const b=$("#btn-refresh"); b.textContent="…"; b.disabled=true; loadQueue().finally(()=>{ b.textContent="↻ Refresh"; b.disabled=false; }); };
 $("#btn-send").onclick=async()=>{
   const items=state.queue.filter(x=>x.phone).map(x=>({escalaId:x.escalaId,phone:x.phone,message:x.mensagem,nome:x.nome}));
   if(!items.length) return;
