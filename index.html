@@ -8,77 +8,37 @@
 <title>SMS · Team</title>
 <link rel="stylesheet" href="/styles.css" />
 <style>
-/* Panel-only additions (the rest comes from the site's /styles.css) */
 .choice .c-main{min-width:0}
 .choice .c-sub{display:block;color:var(--muted);font-size:14px;font-weight:400;margin-top:3px}
-.row.disabled{opacity:.55}
-.chip.ok{color:var(--green);border-color:#2c4a3c;background:#16251e}
-.chip.pend{color:var(--muted);border-color:var(--line-soft);background:var(--card-hi)}
 .chip.no{color:var(--danger);border-color:var(--danger-border);background:var(--danger-soft)}
-.label{display:block;font-size:13px;color:var(--muted);margin:0 4px 8px}
-.msgbox{width:100%;min-height:120px;border:1px solid var(--line-soft);border-radius:12px;background:var(--card);padding:14px 16px;font-size:17px;color:var(--ink);font-family:inherit;line-height:1.5;resize:vertical}
-.msgbox:focus{outline:2px solid var(--amber);outline-offset:0;border-color:var(--amber)}
-.hint{font-size:13px;color:var(--muted);margin:8px 4px 0}
-.okbar{background:#16251e;color:var(--green);border:1px solid #2c4a3c;border-radius:12px;padding:14px 16px;font-size:15px;margin:12px 0}
-.sendbar{position:fixed;left:0;right:0;bottom:0;background:linear-gradient(to top,var(--bg) 72%,rgba(18,18,18,0));padding:16px 20px calc(18px + env(safe-area-inset-bottom));z-index:40}
+.qrow{background:var(--card);border:1px solid var(--line);border-radius:var(--radius-sm);padding:16px 18px;margin-bottom:10px}
+.qhead{display:flex;align-items:center;gap:14px;justify-content:space-between}
+.qmsg{margin-top:12px;font-size:15px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;white-space:pre-wrap;line-height:1.45}
+.sendbar{position:fixed;left:0;right:0;bottom:0;background:linear-gradient(to top,var(--bg) 72%,rgba(0,0,0,0));padding:16px 20px calc(18px + env(safe-area-inset-bottom));z-index:40}
 .sendbar .inner{max-width:720px;margin:0 auto}
 .sel-count{font-size:13px;color:var(--muted);text-align:center;margin-bottom:8px}
 .btn.block{width:100%}
 .hidden{display:none!important}
-.wrap{padding-bottom:120px}
+.wrap{padding-bottom:130px}
+#toast{position:fixed;left:50%;bottom:100px;transform:translateX(-50%) translateY(10px);background:var(--card-hi);color:var(--ink);border:1px solid var(--line-soft);border-radius:999px;padding:10px 18px;font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s ease,transform .2s ease;z-index:60;max-width:90%;text-align:center}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 </style>
 </head>
 <body>
 <div class="wrap">
 
-  <section id="screen-events">
+  <section id="screen-main">
     <div class="top">
       <div>
-        <h1>Notify the team</h1>
+        <h1>Send SMS</h1>
         <div class="sub">Zypher Lounge · SMS</div>
       </div>
     </div>
-    <div id="events-body"><div class="loading">Loading…</div></div>
-    <div class="eyebrow" style="margin-top:22px">Settings</div>
+    <div id="queue-body"><div class="loading">Loading…</div></div>
+    <div class="eyebrow" style="margin-top:26px">Settings</div>
     <div class="choices">
       <button class="choice" id="btn-webhook"><span class="c-main">🔔 Enable automatic confirmation<span class="c-sub">The team's YES/NO replies will update Notion automatically. Use once.</span></span><span class="arrow">›</span></button>
     </div>
-  </section>
-
-  <section id="screen-compose" class="hidden">
-    <div class="top">
-      <button class="back" id="btn-back" aria-label="Back">‹</button>
-      <div>
-        <h1 id="compose-title">Event</h1>
-        <div class="sub" id="compose-sub"></div>
-      </div>
-    </div>
-    <div class="label">Message</div>
-    <textarea id="message" class="msgbox"></textarea>
-    <div class="hint">Use <b>{first_name}</b> to address each person by name. For confirmation, ask them to "reply YES or NO".</div>
-    <div class="toolbar">
-      <div class="eyebrow" style="margin:0">Recipients</div>
-      <label class="switch">
-        <input type="checkbox" id="show-all" />
-        <span class="track"></span>
-        <span>everyone</span>
-      </label>
-    </div>
-    <div class="searchbar">
-      <input id="search" type="text" placeholder="Search person…" autocomplete="off" />
-      <button class="search-clear hidden" id="search-clear" aria-label="Clear">×</button>
-    </div>
-    <div class="toolbar" style="margin-top:0">
-      <button class="btn ghost" id="sel-all" style="height:40px;font-size:14px">Select all</button>
-      <button class="btn ghost" id="sel-none" style="height:40px;font-size:14px">Clear</button>
-    </div>
-    <div class="list" id="roster"></div>
-  </section>
-
-  <section id="screen-result" class="hidden">
-    <div class="top"><div><h1>Sent</h1><div class="sub" id="result-sub"></div></div></div>
-    <div id="result-body"></div>
-    <button class="btn primary block" id="btn-done" style="margin-top:20px">Back to events</button>
   </section>
 
 </div>
@@ -86,9 +46,11 @@
 <div class="sendbar hidden" id="sendbar">
   <div class="inner">
     <div class="sel-count" id="sel-count"></div>
-    <button class="btn primary block" id="btn-send">Send SMS</button>
+    <button class="btn primary block" id="btn-send">Send all</button>
   </div>
 </div>
+
+<div id="toast"></div>
 
 <div class="overlay hidden" id="pin-overlay" style="display:none">
   <div class="modal">
@@ -102,86 +64,76 @@
 
 <script>
 const $ = (s) => document.querySelector(s);
-const state = { pin: sessionStorage.getItem("sms_pin") || "", data: null, event: null, selected: new Map(), roster: [] };
+const state = { pin: sessionStorage.getItem("sms_pin") || "", queue: [] };
 function headers(){ return { "Content-Type":"application/json", "x-panel-pin": state.pin }; }
+function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+function toast(msg){ const t=$("#toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove("show"),3200); }
 
 function askPin(){ const o=$("#pin-overlay"); o.style.display="flex"; o.classList.remove("hidden"); setTimeout(()=>$("#pin-input").focus(),100); }
 function hidePin(){ const o=$("#pin-overlay"); o.style.display="none"; o.classList.add("hidden"); }
-$("#pin-ok").onclick = () => { const v=$("#pin-input").value.trim(); if(!v)return; state.pin=v; sessionStorage.setItem("sms_pin",v); $("#pin-err").classList.add("hidden"); hidePin(); loadEvents(); };
+$("#pin-ok").onclick = () => { const v=$("#pin-input").value.trim(); if(!v)return; state.pin=v; sessionStorage.setItem("sms_pin",v); $("#pin-err").classList.add("hidden"); hidePin(); loadQueue(); };
 $("#pin-input").addEventListener("keydown",(e)=>{ if(e.key==="Enter")$("#pin-ok").click(); });
 
-async function loadEvents(){
-  $("#events-body").innerHTML='<div class="loading">Loading…</div>';
+async function loadQueue(){
+  $("#queue-body").innerHTML='<div class="loading">Loading…</div>';
   try{
-    const r=await fetch("/api/sms/events",{headers:headers()});
+    const r=await fetch("/api/sms/queue",{headers:headers()});
     if(r.status===401){ sessionStorage.removeItem("sms_pin"); state.pin=""; askPin(); return; }
     if(!r.ok) throw new Error((await r.json()).error||r.status);
-    state.data=await r.json(); renderEvents();
-  }catch(e){ $("#events-body").innerHTML='<div class="errbar">Error loading: '+e.message+'</div>'; }
+    const d=await r.json(); state.queue=d.queue||[]; renderQueue();
+  }catch(e){ $("#queue-body").innerHTML='<div class="errbar">Error loading: '+e.message+'</div>'; }
 }
-function fmtDate(iso){ if(!iso)return""; const[y,m,d]=iso.split("-"); const meses=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]; return (meses[(+m)-1]||"")+" "+d; }
-function renderEvents(){
-  const evs=state.data.events||[];
-  let html='<div class="eyebrow">Upcoming events</div><div class="choices">';
-  if(!evs.length){ html+='<div class="empty"><div class="big">No upcoming events</div>Create an event in Notion to see it here.</div>'; }
-  else{ for(const ev of evs){ const qtd=ev.roster.filter(p=>p.temPessoa).length; html+=`<button class="choice" data-ev="${ev.id}"><span class="c-main">${esc(ev.nome)}<span class="c-sub">${fmtDate(ev.data)}${ev.inicio?" · "+esc(ev.inicio):""} · ${qtd} scheduled</span></span><span class="arrow">›</span></button>`; } }
-  html+='</div><div class="eyebrow">Or</div><div class="choices"><button class="choice" data-ev="__manual__"><span class="c-main">✍️ Manual message<span class="c-sub">Pick people and write from scratch</span></span><span class="arrow">›</span></button></div>';
-  $("#events-body").innerHTML=html;
-  document.querySelectorAll("[data-ev]").forEach(b=>b.onclick=()=>openCompose(b.dataset.ev));
-}
-function openCompose(evId){
-  state.selected=new Map();
-  if(evId==="__manual__"){ state.event=null; $("#compose-title").textContent="Manual message"; $("#compose-sub").textContent="Choose recipients"; $("#message").value="Hi {first_name}! "; $("#show-all").checked=true; state.roster=buildManualRoster(); }
-  else{ const ev=state.data.events.find(e=>e.id===evId); state.event=ev; $("#compose-title").textContent=ev.nome; $("#compose-sub").textContent=fmtDate(ev.data)+(ev.inicio?" · starts "+ev.inicio:""); $("#message").value=defaultMsg(ev); $("#show-all").checked=false; state.roster=ev.roster.filter(p=>p.temPessoa).map(p=>({...p})); for(const p of state.roster) if(p.phone) state.selected.set(p.phone,p.nome); }
-  $("#search").value=""; $("#search-clear").classList.add("hidden"); renderRoster(); show("compose");
-}
-function defaultMsg(ev){ const hora=ev.inicio?ev.inicio:"at the scheduled time"; return `Hi {first_name}! Reminder for ${ev.nome}: you start ${hora}. Can you confirm you'll be there? Reply YES or NO. Thanks!`; }
-function buildManualRoster(){ return (state.data.staff||[]).map(s=>({nome:s.nome,phone:s.phone,funcao:"",status:"",temPessoa:true})); }
-function currentRoster(){
-  if(state.event && !$("#show-all").checked) return state.roster;
-  const seen=new Set(state.roster.map(p=>p.phone));
-  const extra=(state.data.staff||[]).filter(s=>!seen.has(s.phone)).map(s=>({nome:s.nome,phone:s.phone,funcao:"",status:"",temPessoa:true}));
-  return state.event ? state.roster.concat(extra) : buildManualRoster();
-}
-function stLabel(s){ return ({Confirmado:"Confirmed",Pendente:"Pending",Recusado:"Declined"})[s]||s; }
-function renderRoster(){
-  const q=$("#search").value.trim().toLowerCase();
-  let people=currentRoster();
-  if(q) people=people.filter(p=>(p.nome||"").toLowerCase().includes(q)||(p.funcao||"").toLowerCase().includes(q));
-  if(!people.length){ $("#roster").innerHTML='<div class="empty">No one found.</div>'; updateBar(); return; }
-  let html="";
-  for(const p of people){
-    const on=p.phone && state.selected.has(p.phone);
-    const semTel=!p.phone;
-    const stChip=p.status?`<span class="chip ${p.status==="Confirmado"?"ok":p.status==="Pendente"?"pend":""}">${esc(stLabel(p.status))}</span>`:"";
-    const fnChip=p.funcao?`<span class="chip">${esc(p.funcao)}</span>`:"";
-    html+=`<div class="row ${on?"on":""} ${semTel?"disabled":""}" data-ph="${esc(p.phone)}" data-nm="${esc(p.nome)}"><div class="row-main"><div class="row-text"><div class="row-name">${esc(p.nome)||"(no name)"}</div><div class="row-meta">${fnChip}${stChip}${semTel?'<span class="chip no">no phone</span>':""}</div></div>${semTel?"":`<button class="yes ${on?"active":""}">${on?"✓":"+"}</button>`}</div></div>`;
+function renderQueue(){
+  const q=state.queue;
+  if(!q.length){ $("#queue-body").innerHTML='<div class="empty"><div class="big">Nothing to send</div>In Notion, write the <b>Mensagem</b> and tick <b>Enviar</b> for each person. They show up here.</div>'; updateBar(); return; }
+  let html='<div class="eyebrow">Ready to send ('+q.length+')</div>';
+  for(const it of q){
+    const noPhone=!it.phone;
+    const chips=[it.funcao,it.evento].filter(Boolean).map(c=>`<span class="chip">${esc(c)}</span>`).join("")+(noPhone?'<span class="chip no">no phone</span>':"");
+    html+=`<div class="qrow" data-id="${esc(it.escalaId)}"><div class="qhead"><div class="row-text"><div class="row-name">${esc(it.nome)||"(no name)"}</div><div class="row-meta">${chips}</div></div><button class="yes send-one" ${noPhone?"disabled":""}>Send</button></div><div class="qmsg">${esc(it.mensagem)}</div></div>`;
   }
-  $("#roster").innerHTML=html;
-  document.querySelectorAll("#roster .row").forEach(row=>{ const ph=row.dataset.ph,nm=row.dataset.nm; if(!ph)return; row.querySelector(".yes").onclick=()=>{ toggle(ph,nm); renderRoster(); }; });
+  $("#queue-body").innerHTML=html;
+  document.querySelectorAll("#queue-body .qrow").forEach(row=>{ const id=row.dataset.id; const btn=row.querySelector(".send-one"); if(btn && !btn.disabled) btn.onclick=()=>sendOne(id); });
   updateBar();
 }
-function toggle(ph,nm){ if(state.selected.has(ph)) state.selected.delete(ph); else state.selected.set(ph,nm); }
-function updateBar(){ const n=state.selected.size; $("#sel-count").textContent=n+(n===1?" person selected":" people selected"); $("#btn-send").textContent=n?"Send SMS ("+n+")":"Select recipients"; $("#btn-send").disabled=n===0; $("#btn-send").style.opacity=n===0?".5":"1"; }
-$("#show-all").onchange=renderRoster;
-$("#search").oninput=()=>{ $("#search-clear").classList.toggle("hidden",!$("#search").value); renderRoster(); };
-$("#search-clear").onclick=()=>{ $("#search").value=""; $("#search-clear").classList.add("hidden"); renderRoster(); };
-$("#sel-all").onclick=()=>{ for(const p of currentRoster()) if(p.phone) state.selected.set(p.phone,p.nome); renderRoster(); };
-$("#sel-none").onclick=()=>{ state.selected.clear(); renderRoster(); };
-$("#btn-back").onclick=()=>show("events");
-$("#btn-done").onclick=()=>{ loadEvents(); show("events"); };
+function updateBar(){
+  const n=state.queue.filter(x=>x.phone).length;
+  $("#sel-count").textContent=n+(n===1?" message ready":" messages ready");
+  $("#btn-send").textContent=n?"Send all ("+n+")":"Nothing to send";
+  $("#btn-send").disabled=n===0; $("#btn-send").style.opacity=n===0?".5":"1";
+  $("#sendbar").classList.toggle("hidden", state.queue.length===0);
+}
+async function sendItems(items){
+  const r=await fetch("/api/sms/send-queue",{method:"POST",headers:headers(),body:JSON.stringify({items})});
+  if(r.status===401){ askPin(); throw new Error("PIN"); }
+  const res=await r.json(); if(!r.ok) throw new Error(res.error||r.status);
+  return res;
+}
+async function sendOne(id){
+  const it=state.queue.find(x=>x.escalaId===id); if(!it) return;
+  const row=document.querySelector('.qrow[data-id="'+(window.CSS&&CSS.escape?CSS.escape(id):id)+'"]');
+  const btn=row&&row.querySelector(".send-one");
+  if(btn){ btn.textContent="…"; btn.disabled=true; }
+  try{
+    const res=await sendItems([{escalaId:it.escalaId,phone:it.phone,message:it.mensagem,nome:it.nome}]);
+    const r0=(res.resultados||[])[0];
+    if(r0&&r0.ok){ state.queue=state.queue.filter(x=>x.escalaId!==id); renderQueue(); toast("✓ Sent to "+(it.nome||"")); }
+    else { toast("✕ "+((r0&&r0.error)||"failed")); if(btn){ btn.textContent="Send"; btn.disabled=false; } }
+  }catch(e){ if(e.message!=="PIN") toast("✕ "+e.message); if(btn){ btn.textContent="Send"; btn.disabled=false; } }
+}
 $("#btn-send").onclick=async()=>{
-  const msg=$("#message").value.trim(); if(!msg){ alert("Write the message."); return; }
-  const recipients=[...state.selected.entries()].map(([phone,nome])=>({phone,nome}));
-  if(!recipients.length) return;
-  if(!confirm("Send to "+recipients.length+" people?")) return;
+  const items=state.queue.filter(x=>x.phone).map(x=>({escalaId:x.escalaId,phone:x.phone,message:x.mensagem,nome:x.nome}));
+  if(!items.length) return;
+  if(!confirm("Send "+items.length+" message(s)?")) return;
   $("#btn-send").textContent="Sending…"; $("#btn-send").disabled=true;
   try{
-    const r=await fetch("/api/sms/send",{method:"POST",headers:headers(),body:JSON.stringify({message:msg,recipients})});
-    if(r.status===401){ askPin(); return; }
-    const res=await r.json(); if(!r.ok) throw new Error(res.error||r.status);
-    showResult(res);
-  }catch(e){ alert("Send error: "+e.message); updateBar(); }
+    const res=await sendItems(items);
+    const okIds=new Set((res.resultados||[]).filter(x=>x.ok).map(x=>x.escalaId));
+    state.queue=state.queue.filter(x=>!okIds.has(x.escalaId));
+    renderQueue();
+    const fail=(res.resultados||[]).filter(x=>!x.ok);
+    toast("✓ "+res.enviados+" of "+res.total+" sent"+(fail.length?" · "+fail.length+" failed":""));
+  }catch(e){ if(e.message!=="PIN"){ toast("✕ "+e.message); updateBar(); } }
 };
 $("#btn-webhook").onclick=async()=>{
   if(!state.pin){ askPin(); return; }
@@ -196,16 +148,7 @@ $("#btn-webhook").onclick=async()=>{
     else { alert("Didn't work: "+(res.resposta_servidor||res.error||"unknown error")); sub.textContent=old; btn.disabled=false; btn.style.opacity="1"; }
   }catch(e){ alert("Error: "+e.message); sub.textContent=old; btn.disabled=false; btn.style.opacity="1"; }
 };
-function showResult(res){
-  const falhas=(res.resultados||[]).filter(x=>!x.ok);
-  let html=`<div class="okbar">✓ ${res.enviados} of ${res.total} sent.</div>`;
-  if(falhas.length){ html+='<div class="errbar">'+falhas.length+' didn\'t send:</div><div class="list">'; for(const f of falhas) html+=`<div class="row"><div class="row-name">${esc(f.nome)||"(no name)"}</div><div class="row-meta">${esc(f.error)}</div></div>`; html+='</div>'; }
-  $("#result-sub").textContent=state.event?state.event.nome:"Manual message";
-  $("#result-body").innerHTML=html; show("result");
-}
-function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
-function show(which){ for(const s of ["events","compose","result"]) $("#screen-"+s).classList.toggle("hidden",s!==which); $("#sendbar").classList.toggle("hidden",which!=="compose"); window.scrollTo(0,0); }
-if(!state.pin) askPin(); else loadEvents();
+if(!state.pin) askPin(); else loadQueue();
 </script>
 </body>
 </html>
