@@ -1,13 +1,14 @@
 // =====================================================================
 //  POST /api/sms/send-queue
 //  Corpo: { items: [{ escalaId, phone, message, nome }] }
-//  Envia o SMS de cada item e desmarca a caixinha "Enviar" no Notion.
+//  Envia o SMS de cada item e muda o Status do Staff para "Enviado".
+//  (escalaId aqui e o id da pagina do Staff.)
 // =====================================================================
 import { checkPin, sendSms } from "./_lib.js";
 
 const NOTION_VERSION = "2025-09-03";
 
-async function marcarEnviado(pageId, carimbo) {
+async function marcarEnviado(pageId) {
   const r = await fetch("https://api.notion.com/v1/pages/" + pageId, {
     method: "PATCH",
     headers: {
@@ -16,10 +17,7 @@ async function marcarEnviado(pageId, carimbo) {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      properties: {
-        "Enviar": { checkbox: false },
-        "Observações": { rich_text: [{ text: { content: ("Enviado por SMS em " + carimbo + ".").slice(0, 1900) } }] },
-      },
+      properties: { "Status": { select: { name: "Enviado" } } },
     }),
   });
   if (!r.ok) throw new Error("Notion " + r.status + ": " + (await r.text()));
@@ -50,8 +48,7 @@ export default async function handler(req, res) {
     try {
       await sendSms(it.phone, texto);
       if (it.escalaId) {
-        const carimbo = new Date().toLocaleString("pt-BR", { timeZone: "Australia/Perth" });
-        try { await marcarEnviado(it.escalaId, carimbo); } catch (e) { /* SMS ja foi; ignora erro no Notion */ }
+        try { await marcarEnviado(it.escalaId); } catch (e) { /* SMS ja foi; ignora erro no Notion */ }
       }
       out.push({ escalaId: it.escalaId, nome, ok: true });
     } catch (e) {
