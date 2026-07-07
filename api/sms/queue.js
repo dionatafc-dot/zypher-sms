@@ -1,48 +1,31 @@
 // =====================================================================
 //  GET /api/sms/queue
-//  Fila de envio: escalas com a caixinha "Enviar" marcada e mensagem escrita.
+//  Fila de envio: pessoas na tabela Staff com Status = "Enviar" e Message.
 // =====================================================================
-import { DS, checkPin, queryAll, txt, relId, pageId, toIntl } from "./_lib.js";
+import { DS, checkPin, queryAll, txt, pageId, toIntl } from "./_lib.js";
 
 export default async function handler(req, res) {
   if (!checkPin(req, res)) return;
   try {
-    const [staffPages, escalaPages, eventoPages] = await Promise.all([
-      queryAll(DS.STAFF),
-      queryAll(DS.ESCALAS),
-      queryAll(DS.EVENTOS),
-    ]);
+    const staffPages = await queryAll(DS.STAFF);
 
-    // Mapa de funcionarios: id -> { nome, phone }
-    const staff = {};
+    const queue = [];
     for (const p of staffPages) {
       const props = p.properties;
-      staff[pageId(p)] = {
-        nome: txt(props["Nome"]),
-        phone: txt(props["Phone (+61)"]) || toIntl(txt(props["Telefone"])),
-      };
-    }
-
-    // Mapa de eventos: id -> nome
-    const eventoNome = {};
-    for (const p of eventoPages) eventoNome[pageId(p)] = txt(p.properties["Evento"]);
-
-    // Monta a fila: so escalas com "Enviar" marcado e "Mensagem" preenchida
-    const queue = [];
-    for (const p of escalaPages) {
-      const props = p.properties;
-      const marcado = props["Enviar"] && props["Enviar"].checkbox === true;
-      const mensagem = txt(props["Mensagem"]);
-      if (!marcado || !mensagem) continue;
-      const pessoa = staff[relId(props["Funcionário"])] || { nome: "", phone: "" };
+      const status = txt(props["Status"]);          // select: "Enviar" | "Enviado"
+      const message = txt(props["Message"]);
+      if (status !== "Enviar" || !message) continue;
+      const nome = txt(props["Nome"]);
+      const phone = txt(props["Phone (+61)"]) || toIntl(txt(props["Telefone"]));
+      const funcao = txt(props["Função principal"]);
       queue.push({
-        escalaId: pageId(p),
-        nome: pessoa.nome,
-        phone: pessoa.phone,
-        funcao: txt(props["Escala"]),
-        evento: eventoNome[relId(props["Evento"])] || "",
-        status: txt(props["Status"]) || "Pendente",
-        mensagem,
+        escalaId: pageId(p),  // id da pagina do Staff (usado para marcar Enviado)
+        nome,
+        phone,
+        funcao,
+        evento: "",
+        status,
+        mensagem: message,
       });
     }
     queue.sort((a, b) => (a.nome || "").localeCompare(b.nome || ""));
