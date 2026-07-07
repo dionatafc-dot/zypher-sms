@@ -87,7 +87,7 @@ async function loadQueue(){
 }
 function renderQueue(){
   const q=state.queue;
-  if(!q.length){ $("#queue-body").innerHTML='<div class="empty"><div class="big">Nothing to send</div>In Notion, write the <b>Mensagem</b> and tick <b>Enviar</b> for each person. They show up here.</div>'; updateBar(); return; }
+  if(!q.length){ $("#queue-body").innerHTML='<div class="empty"><div class="big">Nothing to send</div>In the Staff table, write the <b>Message</b> and set <b>Status</b> to <b>Enviar</b> for each person. They show up here.</div>'; updateBar(); return; }
   let html='<div class="eyebrow">Ready to send ('+q.length+')</div>';
   for(const it of q){
     const noPhone=!it.phone;
