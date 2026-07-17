@@ -1,9 +1,9 @@
 // =====================================================================
 //  POST /api/sms/inbound
 //  Webhook do SMS Gateway (evento "sms:received").
-//  Quando alguem responde SIM/NAO (PT ou EN), atualiza a escala no Notion.
+//  Quando alguem responde SIM/NAO (PT ou EN), atualiza o Status na tabela Staff.
 // =====================================================================
-import { DS, queryAll, txt, relId, pageId, phoneKey, perthToday, setEscalaStatus, appendObservacao } from "./_lib.js";
+import { DS, queryAll, txt, pageId, phoneKey, setStaffStatus, setNota } from "./_lib.js";
 
 // Interpreta a resposta da pessoa de forma tolerante (portugues + ingles).
 // Na duvida devolve "?" (vira observacao no Notion para um humano decidir).
@@ -70,9 +70,7 @@ export default async function handler(req, res) {
     const resposta = interpreta(message);
     const key = phoneKey(sender);
 
-    const [staffPages, eventoPages, escalaPages] = await Promise.all([
-      queryAll(DS.STAFF), queryAll(DS.EVENTOS), queryAll(DS.ESCALAS),
-    ]);
+    const staffPages = await queryAll(DS.STAFF);
 
     // Acha o funcionario pelo telefone
     let staffId = "";
@@ -84,31 +82,16 @@ export default async function handler(req, res) {
     }
     if (!staffId) return res.status(200).json({ ok: true, skip: "telefone nao encontrado" });
 
-    // Data de cada evento
-    const dataEvento = {};
-    for (const p of eventoPages) dataEvento[pageId(p)] = (txt(p.properties["Data"]) || "").slice(0, 10);
-
-    // Escalas dessa pessoa em eventos de hoje em diante, a mais proxima primeiro
-    const today = perthToday();
-    const minhas = escalaPages
-      .filter((p) => relId(p.properties["Funcionário"]) === staffId)
-      .map((p) => ({ id: pageId(p), evId: relId(p.properties["Evento"]) }))
-      .filter((e) => dataEvento[e.evId] && dataEvento[e.evId] >= today)
-      .sort((a, b) => dataEvento[a.evId].localeCompare(dataEvento[b.evId]));
-
-    if (!minhas.length) return res.status(200).json({ ok: true, skip: "sem escala futura" });
-
-    const alvo = minhas[0];
     const carimbo = new Date().toLocaleString("pt-BR", { timeZone: "Australia/Perth" });
 
     if (resposta === "sim") {
-      await setEscalaStatus(alvo.id, "Confirmado");
-      await appendObservacao(alvo.id, `Confirmou via SMS em ${carimbo}.`);
+      await setStaffStatus(staffId, "Confirmado");
+      await setNota(staffId, `Confirmou via SMS em ${carimbo}.`);
     } else if (resposta === "nao") {
-      await setEscalaStatus(alvo.id, "Pendente");
-      await appendObservacao(alvo.id, `RECUSOU via SMS em ${carimbo}: "${message.trim()}".`);
+      await setStaffStatus(staffId, "Recusado");
+      await setNota(staffId, `RECUSOU via SMS em ${carimbo}: "${message.trim()}".`);
     } else {
-      await appendObservacao(alvo.id, `Resposta SMS em ${carimbo} (nao entendida, conferir): "${message.trim()}".`);
+      await setNota(staffId, `Resposta SMS em ${carimbo} (nao entendida, conferir): "${message.trim()}".`);
     }
 
     res.status(200).json({ ok: true, staff: staffNome, resposta });

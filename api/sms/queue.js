@@ -12,10 +12,11 @@ export default async function handler(req, res) {
     const queue = [];
     for (const p of staffPages) {
       const props = p.properties;
-      const status = txt(props["Status"]);          // select: "Enviar" | "Enviado"
+      const status = txt(props["Status"]);          // select: "Enviar" | "Enviado" | "Confirmado" | "Recusado"
       const message = txt(props["Message"]);
-      if (status !== "Enviar" || !message) continue;
       const nome = txt(props["Nome"]);
+      if (status !== "Enviar" || !message) continue;
+      if (nome === "Zypher Lounge") continue;        // linha da casa, nao e uma pessoa
       const phone = txt(props["Phone (+61)"]) || toIntl(txt(props["Telefone"]));
       const funcao = txt(props["Função principal"]);
       queue.push({
