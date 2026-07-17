@@ -1,23 +1,23 @@
 :root {
   color-scheme: dark;
-  --bg: #1b262b;
-  --card: linear-gradient(180deg, #33424a, #232f35);
-  --card-hi: #3c4c55;
-  --ink: #D3C3B9;
-  --muted: #A79E9C;
-  --line: rgba(211,195,185,.07);
-  --line-soft: rgba(211,195,185,.13);
-  --amber: #B58863;
-  --amber-deep: #ca9a74;
-  --amber-soft: rgba(181,136,99,.18);
-  --amber-border: rgba(181,136,99,.30);
-  --green: #86efac;
-  --danger: #fda4af;
-  --danger-soft: rgba(251,113,133,.16);
-  --danger-border: rgba(251,113,133,.30);
-  --gradient-accent: linear-gradient(135deg, #B58863, #ca9a74);
-  --radius: 18px;
-  --radius-sm: 10px;
+  --bg: #000000;
+  --card: linear-gradient(180deg, #141414, #0a0a0a);
+  --card-hi: #1c1c1c;
+  --ink: #f5f5f7;
+  --muted: #98989d;
+  --line: rgba(255,255,255,.07);
+  --line-soft: rgba(255,255,255,.2);
+  --amber: #ff4713;
+  --amber-deep: #ff4713;
+  --amber-soft: rgba(255,71,19,.14);
+  --amber-border: rgba(255,71,19,.3);
+  --green: #30d158;
+  --danger: #ff3b30;
+  --danger-soft: rgba(255,59,48,.12);
+  --danger-border: rgba(255,59,48,.3);
+  --gradient-accent: linear-gradient(135deg, #ff4713, #c81e00);
+  --radius: 22px;
+  --radius-sm: 12px;
 }
 
 * { box-sizing: border-box; }
@@ -25,10 +25,7 @@ html { -webkit-text-size-adjust: 100%; }
 body {
   margin: 0;
   min-height: 100vh;
-  background:
-    radial-gradient(700px 400px at 8% 4%, rgba(120,140,150,.14), transparent 55%),
-    linear-gradient(180deg, #1a2a30, #16232a 75%);
-  background-repeat: no-repeat;
+  background: var(--bg);
   color: var(--ink);
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
   font-size: 17px;
@@ -122,9 +119,9 @@ body {
 .add-form input { height: 48px; border: 1px solid var(--line-soft); border-radius: 12px; padding: 0 14px; font-size: 17px; font-family: inherit; background: var(--bg); color: var(--ink); }
 .add-actions { display: flex; gap: 10px; }
 .btn { appearance: none; cursor: pointer; font-family: inherit; font-size: 16px; font-weight: 600; height: 48px; padding: 0 20px; border-radius: 12px; border: 1px solid var(--line); background: var(--card-hi); color: var(--ink); }
-.btn.primary { background: var(--gradient-accent); border: none; color: #fff; box-shadow: 0 6px 18px -6px rgba(181,136,99,.7); }
+.btn.primary { background: var(--gradient-accent); border: none; color: #fff; box-shadow: 0 6px 18px -6px rgba(255,71,19,.5); }
 .btn.ghost { background: transparent; }
-.btn.danger { background: var(--danger-soft); border: 1px solid var(--danger-border); color: #fecdd3; }
+.btn.danger { background: var(--danger-soft); border: 1px solid var(--danger-border); color: var(--danger); }
 
 .your-adds { display: grid; gap: 8px; margin-top: 12px; }
 .add-item { display: flex; align-items: center; gap: 12px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; }
