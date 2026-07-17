@@ -67,6 +67,20 @@ export async function appendObservacao(pageId, texto) {
   });
 }
 
+// Atualiza o Status (select: Enviar/Enviado/Confirmado/Recusado) de uma pagina de Staff
+export async function setStaffStatus(pageId, statusName) {
+  return notion("pages/" + pageId, "PATCH", {
+    properties: { Status: { select: { name: statusName } } },
+  });
+}
+
+// Escreve texto no campo Notas de uma pagina de Staff
+export async function setNota(pageId, texto) {
+  return notion("pages/" + pageId, "PATCH", {
+    properties: { "Notas": { rich_text: [{ text: { content: texto.slice(0, 1900) } }] } },
+  });
+}
+
 // ---- Leitura de propriedades do Notion -------------------------------
 export function txt(prop) {
   if (!prop) return "";
