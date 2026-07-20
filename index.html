@@ -23,6 +23,9 @@
 .wrap{padding-bottom:130px}
 #toast{position:fixed;left:50%;bottom:100px;transform:translateX(-50%) translateY(10px);background:var(--card-hi);color:var(--ink);border:1px solid var(--line-soft);border-radius:999px;padding:10px 18px;font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s ease,transform .2s ease;z-index:60;max-width:90%;text-align:center}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.tabs{display:flex;gap:8px;background:var(--card-hi);border:1px solid var(--line);border-radius:12px;padding:4px;margin-bottom:18px}
+.tab{flex:1;appearance:none;cursor:pointer;border:none;background:transparent;color:var(--muted);font-family:inherit;font-size:15px;font-weight:600;height:40px;border-radius:9px}
+.tab.active{background:var(--amber);color:#fff}
 </style>
 </head>
 <body>
@@ -35,6 +38,10 @@
         <div class="sub">Zypher Lounge · SMS</div>
       </div>
       <button class="refresh" id="btn-refresh">↻ Refresh</button>
+    </div>
+    <div class="tabs">
+      <button class="tab" id="tab-staff">Staff</button>
+      <button class="tab" id="tab-candidatos">Candidates</button>
     </div>
     <div id="queue-body"><div class="loading">Loading…</div></div>
     <div class="eyebrow" style="margin-top:26px">Settings</div>
@@ -66,7 +73,13 @@
 
 <script>
 const $ = (s) => document.querySelector(s);
-const state = { pin: sessionStorage.getItem("sms_pin") || "", queue: [] };
+const state = { pin: sessionStorage.getItem("sms_pin") || "", queue: [], table: localStorage.getItem("sms_table") || "staff" };
+const TABLE_LABEL = { staff: "the Staff table", candidatos: "the Candidatos table" };
+function renderTabs(){ $("#tab-staff").classList.toggle("active", state.table==="staff"); $("#tab-candidatos").classList.toggle("active", state.table==="candidatos"); }
+function setTable(t){ if(state.table===t) return; state.table=t; localStorage.setItem("sms_table",t); renderTabs(); loadQueue(); }
+$("#tab-staff").onclick=()=>setTable("staff");
+$("#tab-candidatos").onclick=()=>setTable("candidatos");
+renderTabs();
 function headers(){ return { "Content-Type":"application/json", "x-panel-pin": state.pin }; }
 function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
 function toast(msg){ const t=$("#toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove("show"),3200); }
@@ -79,7 +92,7 @@ $("#pin-input").addEventListener("keydown",(e)=>{ if(e.key==="Enter")$("#pin-ok"
 async function loadQueue(){
   $("#queue-body").innerHTML='<div class="loading">Loading…</div>';
   try{
-    const r=await fetch("/api/sms/queue?t="+Date.now(),{headers:headers(),cache:"no-store"});
+    const r=await fetch("/api/sms/queue?table="+state.table+"&t="+Date.now(),{headers:headers(),cache:"no-store"});
     if(r.status===401){ sessionStorage.removeItem("sms_pin"); state.pin=""; askPin(); return; }
     if(!r.ok) throw new Error((await r.json()).error||r.status);
     const d=await r.json(); state.queue=d.queue||[]; renderQueue();
@@ -87,7 +100,7 @@ async function loadQueue(){
 }
 function renderQueue(){
   const q=state.queue;
-  if(!q.length){ $("#queue-body").innerHTML='<div class="empty"><div class="big">Nothing to send</div>In the Staff table, write the <b>Message</b> and set <b>Status</b> to <b>Enviar</b> for each person. They show up here.</div>'; updateBar(); return; }
+  if(!q.length){ $("#queue-body").innerHTML='<div class="empty"><div class="big">Nothing to send</div>In '+TABLE_LABEL[state.table]+', write the <b>Message</b> and set <b>Status</b> to <b>Enviar</b> for each person. They show up here.</div>'; updateBar(); return; }
   let html='<div class="eyebrow">Ready to send ('+q.length+')</div>';
   for(const it of q){
     const noPhone=!it.phone;

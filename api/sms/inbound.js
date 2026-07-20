@@ -1,7 +1,8 @@
 // =====================================================================
 //  POST /api/sms/inbound
 //  Webhook do SMS Gateway (evento "sms:received").
-//  Quando alguem responde SIM/NAO (PT ou EN), atualiza o Status na tabela Staff.
+//  Quando alguem responde SIM/NAO (PT ou EN), procura o telefone na tabela
+//  Staff e na tabela Candidatos (nessa ordem) e atualiza o Status de quem achar.
 // =====================================================================
 import { DS, queryAll, txt, pageId, phoneKey, setStaffStatus, setNota } from "./_lib.js";
 
@@ -70,15 +71,17 @@ export default async function handler(req, res) {
     const resposta = interpreta(message);
     const key = phoneKey(sender);
 
-    const staffPages = await queryAll(DS.STAFF);
-
-    // Acha o funcionario pelo telefone
+    // Acha a pessoa pelo telefone: primeiro na tabela Staff, depois em Candidatos.
     let staffId = "";
     let staffNome = "";
-    for (const p of staffPages) {
-      const props = p.properties;
-      const candidato = phoneKey(txt(props["Phone (+61)"]) || txt(props["Telefone"]));
-      if (candidato && candidato === key) { staffId = pageId(p); staffNome = txt(props["Nome"]); break; }
+    for (const dsId of [DS.STAFF, DS.CANDIDATOS]) {
+      const pages = await queryAll(dsId);
+      for (const p of pages) {
+        const props = p.properties;
+        const numero = phoneKey(txt(props["Phone (+61)"]) || txt(props["Telefone"]));
+        if (numero && numero === key) { staffId = pageId(p); staffNome = txt(props["Nome"]); break; }
+      }
+      if (staffId) break;
     }
     if (!staffId) return res.status(200).json({ ok: true, skip: "telefone nao encontrado" });
 

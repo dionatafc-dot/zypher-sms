@@ -5,9 +5,10 @@
 
 // ---- IDs das fontes de dados (data sources) no Notion ----------------
 export const DS = {
-  STAFF:   "45e34f2d-ebb6-467f-a998-31d8f0786f6d",
-  EVENTOS: "52f152eb-bfd4-4246-9b9b-c78b8e023191",
-  ESCALAS: "740e1a36-00ba-41b4-aac3-02b4d80f2108",
+  STAFF:       "45e34f2d-ebb6-467f-a998-31d8f0786f6d",
+  CANDIDATOS:  "6e7e9278-05a7-4bf0-86dd-cfd4d5246ef0", // Candidatos - Entrevistas Floor Staff
+  EVENTOS:     "52f152eb-bfd4-4246-9b9b-c78b8e023191",
+  ESCALAS:     "740e1a36-00ba-41b4-aac3-02b4d80f2108",
 };
 
 const NOTION_VERSION = "2025-09-03";
