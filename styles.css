@@ -11,6 +11,8 @@
   --amber-deep: #ff4713;
   --amber-soft: rgba(255,71,19,.14);
   --amber-border: rgba(255,71,19,.3);
+  /* accent as a soft filled surface, not an outline — same hex, 22% over the card */
+  --amber-wash: radial-gradient(circle at 32% 26%, rgba(255,71,19,.22), rgba(255,255,255,.02));
   --green: #30d158;
   --danger: #ff3b30;
   --danger-soft: rgba(255,59,48,.12);
@@ -69,7 +71,7 @@ body {
   background: var(--card); border: 1px solid var(--line); border-radius: var(--radius-sm);
   padding: 16px 18px; transition: border-color .15s ease, background .15s ease;
 }
-.row.on { border-color: var(--amber); background: var(--amber-soft); }
+.row.on { border-color: var(--amber); background: var(--amber-wash); }
 .row-main { display: flex; align-items: center; gap: 14px; }
 .row-text { flex: 1 1 auto; min-width: 0; }
 .row-name { font-size: 17px; font-weight: 500; color: var(--ink); }
@@ -144,7 +146,7 @@ body {
 @media (max-width: 520px) { .secs { grid-template-columns: 1fr; } }
 .sec { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; cursor: pointer; font-size: 15px; }
 .sec input { width: 20px; height: 20px; accent-color: var(--amber); }
-.sec.checked { background: var(--amber-soft); border-color: var(--amber-border); }
+.sec.checked { background: var(--amber-wash); border-color: var(--amber-border); }
 .card-foot { margin-top: 16px; display: flex; align-items: center; gap: 12px; }
 .divider { height: 1px; background: var(--line); margin: 34px 0 24px; border: 0; }
 .danger-zone { background: var(--card); border: 1px solid var(--danger-border); border-radius: var(--radius); padding: 20px; }
