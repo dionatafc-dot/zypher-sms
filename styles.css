@@ -9,6 +9,11 @@
   --line-soft: rgba(255,255,255,.28);
   --amber: #ff4713;
   --amber-deep: #ff4713;
+  /* The ONLY orange dark enough to carry WHITE text on top of it: white on
+     --amber is 3.4:1, on this it is 5.8:1. Deliberately a separate token and
+     not a change to --amber-deep, which is used as TEXT elsewhere (.chip,
+     .subgroup-head) where darkening it would make contrast worse, not better. */
+  --amber-strong: #c81e00;
   --amber-soft: rgba(255,71,19,.14);
   --amber-border: rgba(255,71,19,.3);
   /* accent as a soft filled surface, not an outline — same hex, 22% over the card */
