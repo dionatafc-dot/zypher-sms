@@ -1,9 +1,15 @@
 // =====================================================================
-//  GET /api/sms/events
-//  Devolve os proximos eventos com a escala (quem trabalha) de cada um.
-//  Alimenta a aba "Rosters" do painel: nome, funcao, inicio e fim.
+//  GET  /api/sms/events   -> eventos de hoje em diante + a escala de cada um
+//  POST /api/sms/events   -> grava UM campo de UMA linha da escala no Notion
+//                            { escalaId, campo, valor, data }
+//  Alimenta a aba "Rosters" do painel (nome, funcao, status, inicio, fim).
+//  Os dois metodos moram no mesmo arquivo: a Vercel conta 1 funcao por
+//  arquivo, e o plano tem limite.
 // =====================================================================
-import { DS, checkPin, queryAll, txt, relId, pageId, toIntl, perthToday } from "./_lib.js";
+import { DS, checkPin, queryAll, txt, relId, pageId, toIntl, perthToday, updateEscala } from "./_lib.js";
+
+// Perth nao tem horario de verao: e sempre +08:00 o ano inteiro.
+const PERTH_OFFSET = "+08:00";
 
 // Hora do turno no fuso de Perth ("2026-08-15T19:00:00+08:00" -> "19:00").
 // Devolve "" quando a data nao tem hora (ainda nao foi preenchida no Notion).
@@ -16,9 +22,51 @@ function hhmm(iso) {
   return isNaN(d) ? "" : PERTH_HHMM.format(d);
 }
 
+export const STATUS_OPCOES = ["Pendente", "Confirmado", "Finalizado", "No show"];
+
+// Monta o pedaco de "properties" do Notion para UM campo editavel.
+// Valor vazio sempre limpa o campo, nunca grava lixo.
+// O painel devolve os ids sem tracos (pageId() tira). Numa relacao o Notion
+// espera o UUID completo, entao poe os tracos de volta antes de gravar.
+function comTracos(id) {
+  const s = String(id || "").replace(/-/g, "");
+  if (!/^[0-9a-fA-F]{32}$/.test(s)) return id;
+  return s.slice(0, 8) + "-" + s.slice(8, 12) + "-" + s.slice(12, 16) + "-" + s.slice(16, 20) + "-" + s.slice(20);
+}
+
+function propsParaCampo(campo, valor, data) {
+  const v = String(valor == null ? "" : valor).trim();
+  if (campo === "nome") {
+    return { "Funcionário 1": { relation: v ? [{ id: comTracos(v) }] : [] } };
+  }
+  if (campo === "funcao") {
+    return { Escala: { title: v ? [{ text: { content: v.slice(0, 200) } }] : [] } };
+  }
+  if (campo === "status") {
+    if (v && !STATUS_OPCOES.includes(v)) throw new Error("Status invalido: " + v);
+    return { Status: v ? { status: { name: v } } : { status: null } };
+  }
+  if (campo === "inicio" || campo === "fim") {
+    const coluna = campo === "inicio" ? "Início" : "Fim";
+    if (!v) return { [coluna]: { date: null } };
+    if (!/^\d{2}:\d{2}$/.test(v)) throw new Error("Hora invalida: " + v);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(data || ""))) throw new Error("Data do evento faltando");
+    return { [coluna]: { date: { start: data + "T" + v + ":00.000" + PERTH_OFFSET } } };
+  }
+  throw new Error("Campo invalido: " + campo);
+}
+
+async function salvar(req, res) {
+  const { escalaId, campo, valor, data } = req.body || {};
+  if (!escalaId) return res.status(400).json({ error: "escalaId faltando" });
+  await updateEscala(escalaId, propsParaCampo(campo, valor, data));
+  res.status(200).json({ ok: true });
+}
+
 export default async function handler(req, res) {
   if (!checkPin(req, res)) return;
   try {
+    if (req.method === "POST") return await salvar(req, res);
     const [staffPages, eventoPages, escalaPages] = await Promise.all([
       queryAll(DS.STAFF),
       queryAll(DS.EVENTOS),
@@ -63,6 +111,7 @@ export default async function handler(req, res) {
         escalaId: pageId(p),
         funcao: txt(props["Escala"]),
         status: txt(props["Status"]) || "Pendente",
+        funcId, // id do funcionario, para o menu de nomes ja vir marcado
         nome: pessoa ? pessoa.nome : "",
         phone: pessoa ? pessoa.phone : "",
         temPessoa: !!funcId,
@@ -70,6 +119,10 @@ export default async function handler(req, res) {
         fim: hhmm(txt(props["Fim"])),
       });
     }
+
+    // Opcoes do menu de Posicao: nao existe um "select" no Notion para isso
+    // (Posicao e o titulo da linha), entao a lista e o que ja esta em uso.
+    const posicoes = [...new Set(escalaPages.map((p) => txt(p.properties["Escala"])).filter(Boolean))].sort();
 
     // Ordena eventos por data e a escala por funcao
     const list = Object.values(events).sort((a, b) => (a.data || "").localeCompare(b.data || ""));
@@ -80,7 +133,7 @@ export default async function handler(req, res) {
       .filter((s) => s.nome && s.nome !== "Zypher Lounge")
       .sort((a, b) => a.nome.localeCompare(b.nome));
 
-    res.status(200).json({ today, events: list, staff: allStaff });
+    res.status(200).json({ today, events: list, staff: allStaff, posicoes, statusOpcoes: STATUS_OPCOES });
   } catch (e) {
     res.status(500).json({ error: String(e.message || e) });
   }

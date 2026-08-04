@@ -61,6 +61,11 @@ export async function setEscalaStatus(pageId, statusName) {
   });
 }
 
+// Grava qualquer conjunto de propriedades numa pagina de Escala
+export async function updateEscala(pageId, properties) {
+  return notion("pages/" + pageId, "PATCH", { properties });
+}
+
 // Acrescenta texto ao campo Observacoes de uma Escala
 export async function appendObservacao(pageId, texto) {
   return notion("pages/" + pageId, "PATCH", {

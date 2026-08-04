@@ -39,16 +39,38 @@
    so the page itself never scrolls sideways. */
 body.roster-mode .wrap{max-width:1180px;padding-bottom:40px}
 .rosters{display:flex;gap:14px;overflow-x:auto;padding:2px 2px 10px}
-.ev{flex:0 0 300px;background:var(--card);border:1px solid var(--line);border-radius:var(--radius-sm);overflow:hidden}
+.ev{flex:0 0 470px;background:var(--card);border:1px solid var(--line);border-radius:var(--radius-sm);overflow:hidden}
 .ev-head{padding:12px 14px;background:var(--card-hi);border-bottom:1px solid var(--line)}
 .ev-name{font-weight:600;font-size:16px}
 .ev-when{color:var(--muted);font-size:13px;margin-top:2px}
-.sheet{width:100%;border-collapse:collapse;font-size:14px}
+/* fixed layout: without it the native time inputs eat the whole width and
+   squeeze the Name column down to something unreadable */
+.sheet{width:100%;border-collapse:collapse;font-size:14px;table-layout:fixed}
+.sheet col.c-nome{width:26%}
+.sheet col.c-funcao{width:26%}
+.sheet col.c-status{width:18%}
+.sheet col.c-hora{width:15%}
 .sheet th{text-align:left;font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);padding:9px 12px;border-bottom:1px solid var(--line)}
-.sheet td{padding:9px 12px;border-bottom:1px solid rgba(255,255,255,.07)}
+.sheet td{padding:4px 6px;border-bottom:1px solid rgba(255,255,255,.07)}
 .sheet tr:last-child td{border-bottom:0}
 .sheet .t{white-space:nowrap;font-variant-numeric:tabular-nums}
 .sheet .dash{color:var(--muted)}
+/* Editable cells: look like plain text until touched, so the table still
+   reads like a sheet instead of a form. */
+/* min-height 44px: this is a phone panel, and a 30px control is under the
+   size a thumb reliably hits. min-width 0 so the native time input can
+   actually shrink into its column instead of pushing the others out. */
+.ed{width:100%;min-width:0;min-height:44px;appearance:none;font-family:inherit;font-size:14px;color:var(--ink);
+    background:transparent;border:1px solid transparent;border-radius:8px;padding:5px 6px;cursor:pointer}
+select.ed{background-image:none;text-overflow:ellipsis}
+input.ed::-webkit-calendar-picker-indicator{display:none}
+.ed:hover{border-color:var(--line)}
+.ed:focus{outline:none;border-color:var(--amber);background:var(--bg)}
+.ed option{background:#232329;color:var(--ink)}
+input.ed{font-variant-numeric:tabular-nums}
+.ed.saving{border-color:var(--line-soft);opacity:.6}
+.ed.saved{border-color:var(--green)}
+.ed.failed{border-color:var(--danger)}
 .ev-empty{padding:16px 14px;color:var(--muted);font-size:14px}
 /* read by a screen reader, invisible on screen — says which event each table is */
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
@@ -103,7 +125,7 @@ body.roster-mode .wrap{max-width:1180px;padding-bottom:40px}
 
 <script>
 const $ = (s) => document.querySelector(s);
-const state = { pin: sessionStorage.getItem("sms_pin") || "", queue: [], events: [], table: localStorage.getItem("sms_table") || "staff" };
+const state = { pin: sessionStorage.getItem("sms_pin") || "", queue: [], events: [], staff: [], posicoes: [], statusOpcoes: [], table: localStorage.getItem("sms_table") || "staff" };
 const TABLE_LABEL = { staff: "the Staff table", candidatos: "the Candidatos table" };
 const isRoster = () => state.table === "escalas";
 function renderTabs(){
@@ -160,7 +182,9 @@ async function loadRosters(){
     const r=await fetch("/api/sms/events?t="+Date.now(),{headers:headers(),cache:"no-store"});
     if(r.status===401){ sessionStorage.removeItem("sms_pin"); state.pin=""; askPin(); return; }
     if(!r.ok) throw new Error((await r.json()).error||r.status);
-    const d=await r.json(); state.events=d.events||[]; renderRosters();
+    const d=await r.json();
+    state.events=d.events||[]; state.staff=d.staff||[]; state.posicoes=d.posicoes||[]; state.statusOpcoes=d.statusOpcoes||[];
+    renderRosters();
   }catch(e){ $("#roster-body").innerHTML='<div class="errbar">Error loading: '+e.message+'</div>'; }
 }
 function evWhen(ev){
@@ -169,21 +193,70 @@ function evWhen(ev){
   const horas=[ev.inicio,ev.fim].filter(Boolean).join(" – ");
   return [dia,horas].filter(Boolean).join(" · ");
 }
-function cell(v){ return v ? esc(v) : '<span class="dash">—</span>'; }
+// Um <select> editavel. opts = [{v,label}]; sel = valor marcado hoje.
+function pick(campo, sel, opts, rotulo){
+  let h='<select class="ed" data-f="'+campo+'" data-saved="'+esc(sel)+'" aria-label="'+esc(rotulo)+'"><option value="">—</option>';
+  for(const o of opts) h+='<option value="'+esc(o.v)+'"'+(o.v===sel?" selected":"")+'>'+esc(o.label)+'</option>';
+  return h+'</select>';
+}
+function hora(campo, v, rotulo){
+  return '<input class="ed t" type="time" data-f="'+campo+'" data-saved="'+esc(v)+'" value="'+esc(v)+'" aria-label="'+esc(rotulo)+'">';
+}
 function renderRosters(){
   const evs=state.events;
   if(!evs.length){ $("#roster-body").innerHTML='<div class="empty"><div class="big">No upcoming events</div>Add an event in the <b>Eventos</b> table in Notion, with a date from today onwards.</div>'; return; }
-  let html='<div class="eyebrow" style="margin:0 4px 12px">Upcoming events ('+evs.length+')</div><div class="rosters">';
+  const pessoas=state.staff.map(s=>({v:s.id,label:s.nome}));
+  const posicoes=state.posicoes.map(p=>({v:p,label:p}));
+  const status=state.statusOpcoes.map(s=>({v:s,label:s}));
+  let html='<div class="eyebrow" style="margin:0 4px 12px">Upcoming events ('+evs.length+') · changes save to Notion on their own</div><div class="rosters">';
   for(const ev of evs){
     html+='<div class="ev"><div class="ev-head"><div class="ev-name">'+esc(ev.nome||"(no name)")+'</div><div class="ev-when">'+esc(evWhen(ev))+'</div></div>';
     if(!ev.roster.length){ html+='<div class="ev-empty">No one rostered yet.</div></div>'; continue; }
-    html+='<table class="sheet"><caption class="sr-only">Roster for '+esc(ev.nome||"event")+'</caption><thead><tr><th scope="col">Name</th><th scope="col">Position</th><th scope="col">Start</th><th scope="col">End</th></tr></thead><tbody>';
+    html+='<table class="sheet"><caption class="sr-only">Roster for '+esc(ev.nome||"event")+'</caption><colgroup><col class="c-nome"><col class="c-funcao"><col class="c-status"><col class="c-hora"><col class="c-hora"></colgroup><thead><tr><th scope="col">Name</th><th scope="col">Position</th><th scope="col">Status</th><th scope="col">Start</th><th scope="col">End</th></tr></thead><tbody>';
     for(const p of ev.roster){
-      html+='<tr><td>'+cell(p.nome)+'</td><td>'+cell(p.funcao)+'</td><td class="t">'+cell(p.inicio)+'</td><td class="t">'+cell(p.fim)+'</td></tr>';
+      const quem=esc(p.funcao||"this row")+" · "+esc(ev.nome||"");
+      html+='<tr data-id="'+esc(p.escalaId)+'" data-data="'+esc(ev.data)+'">'
+        +'<td>'+pick("nome",p.funcId||"",pessoas,"Name, "+quem)+'</td>'
+        +'<td>'+pick("funcao",p.funcao||"",posicoes,"Position, "+quem)+'</td>'
+        +'<td>'+pick("status",p.status||"",status,"Status, "+quem)+'</td>'
+        +'<td class="t">'+hora("inicio",p.inicio||"","Start, "+quem)+'</td>'
+        +'<td class="t">'+hora("fim",p.fim||"","End, "+quem)+'</td></tr>';
     }
     html+='</tbody></table></div>';
   }
   $("#roster-body").innerHTML=html+'</div>';
+  wireEdits();
+}
+
+// ---- Saving one cell back to Notion ----------------------------------
+// "change" covers picking from a menu. "blur" is the safety net for the
+// phone: leaving a half-typed hour still saves instead of vanishing.
+function wireEdits(){
+  for(const el of document.querySelectorAll("#roster-body .ed")){
+    el.addEventListener("change",()=>saveCell(el));
+    el.addEventListener("blur",()=>saveCell(el));
+  }
+}
+async function saveCell(el){
+  const valor=el.value;
+  if(valor===el.dataset.saved) return;      // nothing actually changed
+  if(el._busy) return; el._busy=true;
+  const tr=el.closest("tr"), anterior=el.dataset.saved;
+  el.className=el.className.replace(/ (saved|failed)/g,"")+" saving";
+  try{
+    const r=await fetch("/api/sms/events",{method:"POST",headers:headers(),
+      body:JSON.stringify({escalaId:tr.dataset.id,campo:el.dataset.f,valor,data:tr.dataset.data})});
+    if(r.status===401){ askPin(); throw new Error("PIN"); }
+    const res=await r.json().catch(()=>({}));
+    if(!r.ok) throw new Error(res.error||("HTTP "+r.status));
+    el.dataset.saved=valor;
+    el.className=el.className.replace(" saving"," saved");
+    setTimeout(()=>{ el.className=el.className.replace(" saved",""); },1500);
+  }catch(e){
+    el.value=anterior;                       // put the old value back on screen
+    el.className=el.className.replace(" saving"," failed");
+    if(e.message!=="PIN") toast("✕ Not saved: "+e.message);
+  }finally{ el._busy=false; }
 }
 function updateBar(){
   const n=state.queue.filter(x=>x.phone).length;
