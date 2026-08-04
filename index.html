@@ -37,23 +37,25 @@
 /* Wider than the 720px of the send list — the point is to see several
    events at the same time. The sideways scroll lives INSIDE .rosters,
    so the page itself never scrolls sideways. */
-body.roster-mode .wrap{max-width:1180px;padding-bottom:40px}
-.rosters{display:flex;gap:14px;overflow-x:auto;padding:2px 2px 10px}
-.ev{flex:0 0 500px;background:var(--card);border:1px solid var(--line);border-radius:var(--radius-sm);overflow:hidden}
-.ev-head{padding:12px 14px;background:var(--card-hi);border-bottom:1px solid var(--line)}
-.ev-name{font-weight:600;font-size:16px}
-.ev-when{color:var(--muted);font-size:13px;margin-top:2px}
+body.roster-mode .wrap{max-width:1320px;padding-bottom:40px}
+.rosters{display:flex;gap:10px;overflow-x:auto;padding:2px 2px 10px}
+.ev{flex:0 0 412px;background:var(--card);border:1px solid var(--line);border-radius:var(--radius-sm);overflow:hidden}
+.ev-head{padding:7px 10px;background:var(--card-hi);border-bottom:1px solid var(--line)}
+.ev-name{font-weight:600;font-size:14px}
 /* Fixed px columns, not percentages: what has to fit is absolute text
    ("Glass collecting (toilets)" is the longest position), not a share of
    the card. Percentages were cutting Position and the hours. */
-.sheet{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed}
-.sheet col.c-nome{width:96px}
-.sheet col.c-funcao{width:152px}
-.sheet col.c-status{width:94px}
-.sheet col.c-hora{width:66px}
-.sheet th{text-align:left;font-size:10px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);padding:7px 8px;border-bottom:1px solid var(--line)}
-.sheet td{padding:2px 4px;border-bottom:1px solid rgba(255,255,255,.07)}
+.sheet{width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed}
+.sheet col.c-nome{width:78px}
+.sheet col.c-funcao{width:136px}
+.sheet col.c-status{width:74px}
+.sheet col.c-hora{width:46px}
+.sheet th{text-align:left;font-size:10px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);padding:4px 5px;border-bottom:1px solid var(--line)}
+.sheet td{padding:0 1px;border-bottom:1px solid rgba(255,255,255,.07)}
 .sheet tr:last-child td{border-bottom:0}
+/* vertical rules, like a spreadsheet — they are what makes columns readable
+   once the rows get this tight */
+.sheet th+th,.sheet td+td{border-left:1px solid rgba(255,255,255,.07)}
 /* Confirmed shifts stand out — that is the whole point of scanning the sheet */
 .sheet tr.ok{background:rgba(48,209,88,.12)}
 .sheet tr.ok td:first-child{box-shadow:inset 3px 0 0 var(--green)}
@@ -61,10 +63,10 @@ body.roster-mode .wrap{max-width:1180px;padding-bottom:40px}
 .sheet .dash{color:var(--muted)}
 /* Editable cells: look like plain text until touched, so the table still
    reads like a sheet instead of a form. */
-/* 38px rows: Dionata asked for a smaller table. Still a comfortable thumb
-   target, just tighter than the 44px a one-off button would get. */
-.ed{width:100%;min-width:0;min-height:38px;appearance:none;font-family:inherit;font-size:13px;color:var(--ink);
-    background:transparent;border:1px solid transparent;border-radius:7px;padding:4px 5px;cursor:pointer}
+/* 26px rows: spreadsheet density, on purpose. Dionata compared it to Excel
+   and wants the whole roster on screen at once, not a tall form. */
+.ed{width:100%;min-width:0;height:26px;appearance:none;font-family:inherit;font-size:12px;color:var(--ink);
+    background:transparent;border:1px solid transparent;border-radius:4px;padding:0 4px;cursor:pointer}
 select.ed{background-image:none;text-overflow:ellipsis}
 input.ed{text-align:center;letter-spacing:.02em}
 .ed:hover{border-color:var(--line)}
@@ -190,11 +192,13 @@ async function loadRosters(){
     renderRosters();
   }catch(e){ $("#roster-body").innerHTML='<div class="errbar">Error loading: '+e.message+'</div>'; }
 }
-function evWhen(ev){
-  let dia="";
-  if(ev.data){ const dt=new Date(ev.data+"T12:00:00"); if(!isNaN(dt)) dia=dt.toLocaleDateString("en-AU",{weekday:"short",day:"numeric",month:"short"}); }
-  const horas=[ev.inicio,ev.fim].filter(Boolean).join(" – ");
-  return [dia,horas].filter(Boolean).join(" · ");
+// "Sukkari - 15 Aug" — the whole header, one line.
+function evTitulo(ev){
+  const nome=ev.nome||"(no name)";
+  if(!ev.data) return nome;
+  const dt=new Date(ev.data+"T12:00:00");
+  if(isNaN(dt)) return nome;
+  return nome+" - "+dt.toLocaleDateString("en-AU",{day:"numeric",month:"short"});
 }
 // Um <select> editavel. opts = [{v,label}]; sel = valor marcado hoje.
 function pick(campo, sel, opts, rotulo){
@@ -234,9 +238,9 @@ function renderRosters(){
   const pessoas=state.staff.map(s=>({v:s.id,label:s.nome}));
   const posicoes=state.posicoes.map(p=>({v:p,label:p}));
   const status=state.statusOpcoes.map(s=>({v:s,label:s}));
-  let html='<div class="eyebrow" style="margin:0 4px 12px">Upcoming events ('+evs.length+') · changes save to Notion on their own</div><div class="rosters">';
+  let html='<div class="eyebrow" style="margin:0 4px 8px">Upcoming events ('+evs.length+') · changes save to Notion on their own</div><div class="rosters">';
   for(const ev of evs){
-    html+='<div class="ev"><div class="ev-head"><div class="ev-name">'+esc(ev.nome||"(no name)")+'</div><div class="ev-when">'+esc(evWhen(ev))+'</div></div>';
+    html+='<div class="ev"><div class="ev-head"><div class="ev-name">'+esc(evTitulo(ev))+'</div></div>';
     if(!ev.roster.length){ html+='<div class="ev-empty">No one rostered yet.</div></div>'; continue; }
     html+='<table class="sheet"><caption class="sr-only">Roster for '+esc(ev.nome||"event")+'</caption><colgroup><col class="c-nome"><col class="c-funcao"><col class="c-status"><col class="c-hora"><col class="c-hora"></colgroup><thead><tr><th scope="col">Name</th><th scope="col">Position</th><th scope="col">Status</th><th scope="col">Start</th><th scope="col">End</th></tr></thead><tbody>';
     for(const p of ev.roster){
