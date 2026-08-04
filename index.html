@@ -32,6 +32,26 @@
    are looking at. #c81e00 is the same orange family (already the far end of
    --gradient-accent) and takes white to 5.8:1. */
 .tab.active{background:var(--amber-strong);color:#fff}
+
+/* ---- Rosters tab: one column per event, side by side ---------------- */
+/* Wider than the 720px of the send list — the point is to see several
+   events at the same time. The sideways scroll lives INSIDE .rosters,
+   so the page itself never scrolls sideways. */
+body.roster-mode .wrap{max-width:1180px;padding-bottom:40px}
+.rosters{display:flex;gap:14px;overflow-x:auto;padding:2px 2px 10px}
+.ev{flex:0 0 300px;background:var(--card);border:1px solid var(--line);border-radius:var(--radius-sm);overflow:hidden}
+.ev-head{padding:12px 14px;background:var(--card-hi);border-bottom:1px solid var(--line)}
+.ev-name{font-weight:600;font-size:16px}
+.ev-when{color:var(--muted);font-size:13px;margin-top:2px}
+.sheet{width:100%;border-collapse:collapse;font-size:14px}
+.sheet th{text-align:left;font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);padding:9px 12px;border-bottom:1px solid var(--line)}
+.sheet td{padding:9px 12px;border-bottom:1px solid rgba(255,255,255,.07)}
+.sheet tr:last-child td{border-bottom:0}
+.sheet .t{white-space:nowrap;font-variant-numeric:tabular-nums}
+.sheet .dash{color:var(--muted)}
+.ev-empty{padding:16px 14px;color:var(--muted);font-size:14px}
+/* read by a screen reader, invisible on screen — says which event each table is */
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
 </style>
 </head>
 <body>
@@ -40,7 +60,7 @@
   <section id="screen-main">
     <div class="top">
       <div>
-        <h1>Send SMS</h1>
+        <h1 id="page-title">Send SMS</h1>
         <div class="sub">Zypher Lounge · SMS</div>
       </div>
       <button class="refresh" id="btn-refresh">↻ Refresh</button>
@@ -48,11 +68,15 @@
     <div class="tabs">
       <button class="tab" id="tab-staff">Staff</button>
       <button class="tab" id="tab-candidatos">Candidates</button>
+      <button class="tab" id="tab-escalas">Rosters</button>
     </div>
     <div id="queue-body"><div class="loading">Loading…</div></div>
-    <div class="eyebrow" style="margin-top:26px">Settings</div>
-    <div class="choices">
-      <button class="choice" id="btn-webhook"><span class="c-main">🔔 Enable automatic confirmation<span class="c-sub">The team's YES/NO replies will update Notion automatically. Use once.</span></span><span class="arrow">›</span></button>
+    <div id="roster-body" class="hidden"></div>
+    <div id="settings-block">
+      <div class="eyebrow" style="margin-top:26px">Settings</div>
+      <div class="choices">
+        <button class="choice" id="btn-webhook"><span class="c-main">🔔 Enable automatic confirmation<span class="c-sub">The team's YES/NO replies will update Notion automatically. Use once.</span></span><span class="arrow">›</span></button>
+      </div>
     </div>
   </section>
 
@@ -79,12 +103,24 @@
 
 <script>
 const $ = (s) => document.querySelector(s);
-const state = { pin: sessionStorage.getItem("sms_pin") || "", queue: [], table: localStorage.getItem("sms_table") || "staff" };
+const state = { pin: sessionStorage.getItem("sms_pin") || "", queue: [], events: [], table: localStorage.getItem("sms_table") || "staff" };
 const TABLE_LABEL = { staff: "the Staff table", candidatos: "the Candidatos table" };
-function renderTabs(){ $("#tab-staff").classList.toggle("active", state.table==="staff"); $("#tab-candidatos").classList.toggle("active", state.table==="candidatos"); }
-function setTable(t){ if(state.table===t) return; state.table=t; localStorage.setItem("sms_table",t); renderTabs(); loadQueue(); }
+const isRoster = () => state.table === "escalas";
+function renderTabs(){
+  for(const t of ["staff","candidatos","escalas"]) $("#tab-"+t).classList.toggle("active", state.table===t);
+  const roster = isRoster();
+  document.body.classList.toggle("roster-mode", roster);
+  $("#page-title").textContent = roster ? "Rosters" : "Send SMS";
+  $("#queue-body").classList.toggle("hidden", roster);
+  $("#roster-body").classList.toggle("hidden", !roster);
+  $("#settings-block").classList.toggle("hidden", roster);
+  if(roster) $("#sendbar").classList.add("hidden");
+}
+function load(){ return isRoster() ? loadRosters() : loadQueue(); }
+function setTable(t){ if(state.table===t) return; state.table=t; localStorage.setItem("sms_table",t); renderTabs(); load(); }
 $("#tab-staff").onclick=()=>setTable("staff");
 $("#tab-candidatos").onclick=()=>setTable("candidatos");
+$("#tab-escalas").onclick=()=>setTable("escalas");
 renderTabs();
 function headers(){ return { "Content-Type":"application/json", "x-panel-pin": state.pin }; }
 function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
@@ -92,7 +128,7 @@ function toast(msg){ const t=$("#toast"); t.textContent=msg; t.classList.add("sh
 
 function askPin(){ const o=$("#pin-overlay"); o.style.display="flex"; o.classList.remove("hidden"); setTimeout(()=>$("#pin-input").focus(),100); }
 function hidePin(){ const o=$("#pin-overlay"); o.style.display="none"; o.classList.add("hidden"); }
-$("#pin-ok").onclick = () => { const v=$("#pin-input").value.trim(); if(!v)return; state.pin=v; sessionStorage.setItem("sms_pin",v); $("#pin-err").classList.add("hidden"); hidePin(); loadQueue(); };
+$("#pin-ok").onclick = () => { const v=$("#pin-input").value.trim(); if(!v)return; state.pin=v; sessionStorage.setItem("sms_pin",v); $("#pin-err").classList.add("hidden"); hidePin(); load(); };
 $("#pin-input").addEventListener("keydown",(e)=>{ if(e.key==="Enter")$("#pin-ok").click(); });
 
 async function loadQueue(){
@@ -116,6 +152,38 @@ function renderQueue(){
   $("#queue-body").innerHTML=html;
   document.querySelectorAll("#queue-body .qrow").forEach(row=>{ const id=row.dataset.id; const btn=row.querySelector(".send-one"); if(btn && !btn.disabled) btn.onclick=()=>sendOne(id); });
   updateBar();
+}
+// ---- Rosters tab: one table per event, side by side ------------------
+async function loadRosters(){
+  $("#roster-body").innerHTML='<div class="loading">Loading…</div>';
+  try{
+    const r=await fetch("/api/sms/events?t="+Date.now(),{headers:headers(),cache:"no-store"});
+    if(r.status===401){ sessionStorage.removeItem("sms_pin"); state.pin=""; askPin(); return; }
+    if(!r.ok) throw new Error((await r.json()).error||r.status);
+    const d=await r.json(); state.events=d.events||[]; renderRosters();
+  }catch(e){ $("#roster-body").innerHTML='<div class="errbar">Error loading: '+e.message+'</div>'; }
+}
+function evWhen(ev){
+  let dia="";
+  if(ev.data){ const dt=new Date(ev.data+"T12:00:00"); if(!isNaN(dt)) dia=dt.toLocaleDateString("en-AU",{weekday:"short",day:"numeric",month:"short"}); }
+  const horas=[ev.inicio,ev.fim].filter(Boolean).join(" – ");
+  return [dia,horas].filter(Boolean).join(" · ");
+}
+function cell(v){ return v ? esc(v) : '<span class="dash">—</span>'; }
+function renderRosters(){
+  const evs=state.events;
+  if(!evs.length){ $("#roster-body").innerHTML='<div class="empty"><div class="big">No upcoming events</div>Add an event in the <b>Eventos</b> table in Notion, with a date from today onwards.</div>'; return; }
+  let html='<div class="eyebrow" style="margin:0 4px 12px">Upcoming events ('+evs.length+')</div><div class="rosters">';
+  for(const ev of evs){
+    html+='<div class="ev"><div class="ev-head"><div class="ev-name">'+esc(ev.nome||"(no name)")+'</div><div class="ev-when">'+esc(evWhen(ev))+'</div></div>';
+    if(!ev.roster.length){ html+='<div class="ev-empty">No one rostered yet.</div></div>'; continue; }
+    html+='<table class="sheet"><caption class="sr-only">Roster for '+esc(ev.nome||"event")+'</caption><thead><tr><th scope="col">Name</th><th scope="col">Position</th><th scope="col">Start</th><th scope="col">End</th></tr></thead><tbody>';
+    for(const p of ev.roster){
+      html+='<tr><td>'+cell(p.nome)+'</td><td>'+cell(p.funcao)+'</td><td class="t">'+cell(p.inicio)+'</td><td class="t">'+cell(p.fim)+'</td></tr>';
+    }
+    html+='</tbody></table></div>';
+  }
+  $("#roster-body").innerHTML=html+'</div>';
 }
 function updateBar(){
   const n=state.queue.filter(x=>x.phone).length;
@@ -142,7 +210,7 @@ async function sendOne(id){
     else { toast("✕ "+((r0&&r0.error)||"failed")); if(btn){ btn.textContent="Send"; btn.disabled=false; } }
   }catch(e){ if(e.message!=="PIN") toast("✕ "+e.message); if(btn){ btn.textContent="Send"; btn.disabled=false; } }
 }
-$("#btn-refresh").onclick=()=>{ const b=$("#btn-refresh"); b.textContent="…"; b.disabled=true; loadQueue().finally(()=>{ b.textContent="↻ Refresh"; b.disabled=false; }); };
+$("#btn-refresh").onclick=()=>{ const b=$("#btn-refresh"); b.textContent="…"; b.disabled=true; load().finally(()=>{ b.textContent="↻ Refresh"; b.disabled=false; }); };
 $("#btn-send").onclick=async()=>{
   const items=state.queue.filter(x=>x.phone).map(x=>({escalaId:x.escalaId,phone:x.phone,message:x.mensagem,nome:x.nome}));
   if(!items.length) return;
@@ -170,7 +238,7 @@ $("#btn-webhook").onclick=async()=>{
     else { alert("Didn't work: "+(res.resposta_servidor||res.error||"unknown error")); sub.textContent=old; btn.disabled=false; btn.style.opacity="1"; }
   }catch(e){ alert("Error: "+e.message); sub.textContent=old; btn.disabled=false; btn.style.opacity="1"; }
 };
-if(!state.pin) askPin(); else loadQueue();
+if(!state.pin) askPin(); else load();
 </script>
 </body>
 </html>

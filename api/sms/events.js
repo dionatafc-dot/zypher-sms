@@ -1,8 +1,20 @@
 // =====================================================================
 //  GET /api/sms/events
 //  Devolve os proximos eventos com a escala (quem trabalha) de cada um.
+//  Alimenta a aba "Rosters" do painel: nome, funcao, inicio e fim.
 // =====================================================================
 import { DS, checkPin, queryAll, txt, relId, pageId, toIntl, perthToday } from "./_lib.js";
+
+// Hora do turno no fuso de Perth ("2026-08-15T19:00:00+08:00" -> "19:00").
+// Devolve "" quando a data nao tem hora (ainda nao foi preenchida no Notion).
+const PERTH_HHMM = new Intl.DateTimeFormat("en-AU", {
+  timeZone: "Australia/Perth", hour: "2-digit", minute: "2-digit", hour12: false,
+});
+function hhmm(iso) {
+  if (!iso || iso.length <= 10) return "";
+  const d = new Date(iso);
+  return isNaN(d) ? "" : PERTH_HHMM.format(d);
+}
 
 export default async function handler(req, res) {
   if (!checkPin(req, res)) return;
@@ -44,7 +56,8 @@ export default async function handler(req, res) {
       const props = p.properties;
       const evId = relId(props["Evento"]);
       if (!events[evId]) continue;
-      const funcId = relId(props["Funcionário"]);
+      // A coluna no Notion chama-se "Funcionário 1" (com o 1), nao "Funcionário".
+      const funcId = relId(props["Funcionário 1"]);
       const pessoa = staff[funcId];
       events[evId].roster.push({
         escalaId: pageId(p),
@@ -53,6 +66,8 @@ export default async function handler(req, res) {
         nome: pessoa ? pessoa.nome : "",
         phone: pessoa ? pessoa.phone : "",
         temPessoa: !!funcId,
+        inicio: hhmm(txt(props["Início"])),
+        fim: hhmm(txt(props["Fim"])),
       });
     }
 
